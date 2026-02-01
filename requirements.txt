@@ -1,0 +1,14 @@
+numpy
+tqdm
+more-itertools
+requests[socks]
+rich
+torch
+numba
+tiktoken
+openai-whisper
+moviepy
+yt-dlp
+sqlalchemy
+serverchan_sdk
+pyinstaller

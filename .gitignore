@@ -1,0 +1,15 @@
+# ---------- IDE ----------
+.idea/
+
+# ---------- Python ----------
+__pycache__/
+*.pyc
+
+# ---------- Runtime data ----------
+/data/*
+!/data/prompts/
+!/data/prompts/**
+
+# ---------- Secrets ----------
+/data/config.txt
+.env
