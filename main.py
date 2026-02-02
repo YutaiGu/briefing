@@ -1,12 +1,12 @@
 import time
 from sqlalchemy.orm import Session
 
-from .config import DOWNLOAD_INTERVAL, PROCESS_INTERVAL, PUSHER_LIMIT, PUSHER_INTERVAL
-from .db import engine, clean_all, init_db
-from .downloader import downloader, import_external_entries
-from .transcriber import transcriber
-from .summarizer import summarizer
-from .pusher import pusher
+from config import DOWNLOAD_INTERVAL, PROCESS_INTERVAL, PUSHER_LIMIT, PUSHER_INTERVAL
+from db import engine, clean_all, init_db
+from downloader import downloader, import_external_entries
+from transcriber import transcriber, check_whisper_model
+from summarizer import summarizer
+from pusher import pusher
 
 def run() -> None:
     download_timer = 0
@@ -41,4 +41,5 @@ def run() -> None:
 
 if __name__ == "__main__":
     init_db()
+    check_whisper_model()
     run()

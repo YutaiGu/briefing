@@ -5,9 +5,9 @@ import tiktoken
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
 
-from .config import api_info, model_info, model_para, api_model, OUTPUT_DIR
-from .config import SUMMARIZER_LIMIT
-from .db import get_unsummarized, update_entries
+from config import api_info, model_info, model_para, api_model, OUTPUT_DIR
+from config import SUMMARIZER_LIMIT
+from db import get_unsummarized, update_entries
 
 def one_summarizer(entry):
     try:

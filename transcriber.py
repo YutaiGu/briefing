@@ -6,8 +6,8 @@ import whisper
 from moviepy import AudioFileClip
 from multiprocessing import Pool, cpu_count
 
-from .config import DATA_DIR, api_model, TRANSCRIBER_LIMIT
-from .db import get_untranscribed, update_entries
+from config import DATA_DIR, api_model, TRANSCRIBER_LIMIT
+from db import get_untranscribed, update_entries
 
 _MODEL = None
 _MODEL_NAME = None
@@ -18,7 +18,8 @@ def one_transcriber(entry):
         entry = Video_Processing(entry)
         entry.transcribed = 1  # Mark only after final success
         return entry
-    except Exception:
+    except Exception as e:
+        print(f"Error from one_transcriber: {e}")
         return None
 
 def transcriber(session) -> None:
@@ -33,13 +34,16 @@ def transcriber(session) -> None:
                 continue
             update_entries(session, [updated])
 
-def _get_model(name: str):
-    # Global Cache Model
-    global _MODEL, _MODEL_NAME
-    if _MODEL is None or _MODEL_NAME != name:
-        _MODEL = whisper.load_model(name)
-        _MODEL_NAME = name
-    return _MODEL
+def check_whisper_model() -> None:
+    # download + load whisper model at startup to avoid first-run failures.
+    global _MODEL
+    model_name = api_model["whisper_model"]
+    try:
+        if _MODEL is None or _MODEL_NAME != model_name:
+            _MODEL = whisper.load_model(model_name)
+    except Exception as e:
+        print(f"Failed to load model {model_name}: {e}")
+        raise
 
 def Clean_Files(filename, temporary_dir):
     import shutil
@@ -88,7 +92,7 @@ def Split_Video_File(video_file, temporary_dir, split_duration=1800):
 
 
 def Whisper_Audio(video_file, model_type, language=None):
-    model = _get_model(model_type)
+    model = _MODEL
     use_fp16 = torch.cuda.is_available()
 
     result = model.transcribe(

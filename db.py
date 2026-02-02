@@ -6,7 +6,8 @@ from pathlib import Path
 import hashlib
 import shutil
 
-from .config import DB_URL, DATA_DIR, AUDIO_DIR, OUTPUT_DIR, PROMPT_DIR, TEMPORARY_DIR, check_config
+from config import DB_URL, DATA_DIR, AUDIO_DIR, OUTPUT_DIR, PROMPT_DIR, TEMPORARY_DIR, check_config
+
 
 engine = create_engine(DB_URL, future=True)
 Base = declarative_base()

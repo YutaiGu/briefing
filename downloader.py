@@ -2,8 +2,8 @@ from yt_dlp import YoutubeDL
 from datetime import datetime
 import hashlib
 
-from .config import AUDIO_DIR, ENTRIES_LIMIT, SOURCE_URLS, UPDATE_LIMIT
-from .db import Video, update_entries, init_entries, get_undownloaded, get_entries_by_ids, save_entries
+from config import AUDIO_DIR, ENTRIES_LIMIT, SOURCE_URLS, UPDATE_LIMIT
+from db import Video, update_entries, init_entries, get_undownloaded, get_entries_by_ids, save_entries
 
 def downloader(session) -> None:
     for source_url in SOURCE_URLS:

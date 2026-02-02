@@ -1,8 +1,8 @@
 from serverchan_sdk import sc_send
 
-from .config import api_model, READ_LANGUAGE, OUTPUT_DIR, SERVER3_KEY
-from .db import get_unpushed, update_entries
-from .summarizer import request_gpt
+from config import api_model, READ_LANGUAGE, OUTPUT_DIR, SERVER3_KEY
+from db import get_unpushed, update_entries
+from summarizer import request_gpt
 
 
 def pushto_Server3(message: str) -> None:
