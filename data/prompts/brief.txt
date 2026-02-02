@@ -52,8 +52,6 @@ Remove:
 
 === Output Format (Markdown) ===
 
-# Brief Walkthrough
-
 can be read comfortably in 2–3 minutes!!!
 Each section represents a reasoning phase, not an individual step.
 

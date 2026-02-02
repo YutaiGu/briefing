@@ -59,7 +59,6 @@ def pusher(session, limit: int) -> None:
                 f"# {upload_date} {extractor}\n"
                 f"{source}\n"
                 f"{title}\n"
-                f"Brief Summary:\n"
                 f"{text}"
             )
             v.pushed = 1

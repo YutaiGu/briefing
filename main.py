@@ -12,7 +12,8 @@ def run() -> None:
     download_timer = 0
     process_timer = 0
     pusher_timer = 0
-
+    print("START")
+    
     while True:
         now = time.time()
 

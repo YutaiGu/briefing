@@ -53,16 +53,21 @@ def fetch_all_entries(source_url: str) -> list:
         pushed            Not set here
         video_id          Guaranteed  <-
     '''
-    ydl_opts = {
-        "skip_download": True,
-        "quiet": True,
-        "no_warnings": True,
-        "playlist_items": ENTRIES_LIMIT,
-    }
+    try:
+        ydl_opts = {
+            "skip_download": True,
+            "quiet": True,
+            "no_warnings": True,
+            "playlist_items": ENTRIES_LIMIT,
+            "extract_flat": True,
+        }
 
-    with YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(source_url, download=False)
-    if not info:
+        with YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(source_url, download=False)
+        if not info:
+            return []
+    except Exception as e:
+        print(e)
         return []
    
     raw_entries = info.get("entries")
