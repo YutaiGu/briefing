@@ -36,10 +36,18 @@ def transcriber(session) -> None:
 
 def check_whisper_model() -> None:
     # download + load whisper model at startup to avoid first-run failures.
+    model_name = api_model["whisper_model"]
+    try:
+        _ = whisper.load_model(model_name)
+    except Exception as e:
+        print(f"Failed to load model {model_name}: {e}")
+        raise
+
+def load_whisper_model() -> None:
     global _MODEL
     model_name = api_model["whisper_model"]
     try:
-        if _MODEL is None or _MODEL_NAME != model_name:
+        if _MODEL is None:
             _MODEL = whisper.load_model(model_name)
     except Exception as e:
         print(f"Failed to load model {model_name}: {e}")
@@ -91,11 +99,11 @@ def Split_Video_File(video_file, temporary_dir, split_duration=1800):
     return filelist
 
 
-def Whisper_Audio(video_file, model_type, language=None):
-    model = _MODEL
+def Whisper_Audio(video_file, language=None):
+    load_whisper_model()
     use_fp16 = torch.cuda.is_available()
 
-    result = model.transcribe(
+    result = _MODEL.transcribe(
         video_file,
         verbose=False,
         language=language,
@@ -116,7 +124,6 @@ def Video_Processing(entry):
         # else:
             # language = raw.split("-")[0]
     video_file = entry.file_path
-    whisper_model = api_model["whisper_model"] or "base"
     filename = os.path.basename(video_file).split('.')[0]
     print(f"[START] {filename}")
     start_time = datetime.now()
@@ -147,7 +154,7 @@ def Video_Processing(entry):
     # 写入txt
     # progress_bar = tqdm(total=len(filelist), desc="Processing Video") # 进度条
     for fp in filelist:
-        result = Whisper_Audio(fp, whisper_model, language=language)  # 获取音频识别的结果
+        result = Whisper_Audio(fp, language=language)  # 获取音频识别的结果
         # progress_bar.update(1)
 
         with open(whisper_path, "a", encoding="utf-8") as whisper_file:
