@@ -30,7 +30,7 @@ def summarizer(session) -> None:
                 continue
             update_entries(session, [updated])
 
-def request_gpt(input, system_content, which_api, model):
+def request_gpt(input, system_content, model):
     '''
     request chatgpt
 
@@ -52,16 +52,10 @@ def request_gpt(input, system_content, which_api, model):
             'total_tokens': 1672},
         'system_fingerprint': 'fp_f33667828e'}
     '''
-    if not which_api:
-        raise ValueError("which_api is required")
     if not model:
         raise ValueError("model is required")
-    if which_api not in api_info:
-        raise ValueError(f"unknown api slot: {which_api}")
-    if model not in model_info:
-        raise ValueError(f"unknown model: {model}")
 
-    api_key = api_info[which_api]["api_key"]
+    api_key = api_info["api_key"]
     try:
         encoding = tiktoken.encoding_for_model(model_info[model]["model"])
     except KeyError:
@@ -89,15 +83,21 @@ def request_gpt(input, system_content, which_api, model):
 
     # 发送请求
     try:
-        response = requests.post(api_info[which_api]["url_redirect"], json = payload, headers = headers)
+        response = requests.post(
+            api_info["url_redirect"], 
+            json = payload, 
+            headers = headers,
+            timeout=(20, 120),  # Connection timeout: 10s, Read timeout 120s
+        )
     except Exception as e:
         print(f"An error occurred:", str(e))
         print(f"Text token: {len(encoding.encode(input))}")
-        print(response.json())
 
     # 输出信息
     response_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     response_json = response.json()
+    if response_json.get("error") is not None:
+        print("request_gpt error:", response_json)
     cost = (model_info[model]["input_price"]*response_json['usage']['prompt_tokens']+model_info[model]["output_price"]*response_json['usage']['completion_tokens'])/1000
     print(response_time + ":   ",
           "Tokens: input:", f"{response_json['usage']['prompt_tokens']:<6}",
@@ -107,26 +107,21 @@ def request_gpt(input, system_content, which_api, model):
 
     return response_json
 
-def summarizer_request_gpt(input, which_system, which_api, model):
+def summarizer_request_gpt(input, which_system, model):
     '''
     Args:
         input (str): 发送的user内容
         which_system (str): 请求提示词
-        which_api (str): 使用的api
         model (str): 使用的模型
 
     Returns:
         response_txt (str):
         history (list):
     '''
-    if not which_api:
-        raise ValueError("which_api is required")
     if not model:
         raise ValueError("model is required")
     if not which_system:
         raise ValueError("which_system is required")
-    if which_api not in api_info:
-        raise ValueError(f"unknown api slot: {which_api}")
     if model not in model_info:
         raise ValueError(f"unknown model: {model}")
     if which_system not in model_para["system_content"]:
@@ -134,7 +129,7 @@ def summarizer_request_gpt(input, which_system, which_api, model):
 
     system_content = model_para["system_content"][which_system] + model_para["system_content"]['additional']
 
-    response_json = request_gpt(input, system_content, which_api, model)
+    response_json = request_gpt(input, system_content, model)
     response_txt =response_json['choices'][0]['message']['content']
     history = [
         {"role": "system", "content": system_content},
@@ -202,7 +197,6 @@ def Text_Processing(entry):
             resp, _ = summarizer_request_gpt(
                 temp_prompt,
                 "outline_trace",
-                api_model["summarize_api"],
                 summarize_model,
             )
             outlines.append((tag + "\n" if tag else "") + resp)
@@ -215,7 +209,6 @@ def Text_Processing(entry):
     brief_text, brief_history = summarizer_request_gpt(
         outline_text,
         "brief",
-        api_model["summarize_api"],
         api_model["summarize_model"],
     )
     paths["brief"].write_text(brief_text, encoding="utf-8")

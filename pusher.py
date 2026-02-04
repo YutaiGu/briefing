@@ -16,7 +16,6 @@ def translate(input: str, language: str):
     response_json = request_gpt(
         input,
         f"You are a translation engine. Your task is to translate the user input into {language}. Output only the translation. Do not add any commentary, prefixes, suffixes, or explanations. Preserve the original formatting exactly.",
-        api_model["translate_api"],
         api_model["translate_model"],
     )
     return response_json

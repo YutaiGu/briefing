@@ -23,6 +23,18 @@ def downloader(session) -> None:
             update_entries(session, [entry])
         print(f"Download finished: {ok} succeeded, {fail} failed.")
 
+def firefox_cookie_available() -> bool:
+    try:
+        with YoutubeDL({
+            "cookiesfrombrowser": ("firefox",),
+            "quiet": True,
+            "skip_download": True,
+        }) as ydl:
+            ydl.cookiejar  # Trigger loading
+        return True
+    except Exception:
+        return False
+
 def make_local_audio_id(filename: str) -> str:
     # 24-char id for external audio files
     return hashlib.sha1(filename.encode("utf-8")).hexdigest()[:24]
@@ -61,6 +73,9 @@ def fetch_all_entries(source_url: str) -> list:
             "playlist_items": ENTRIES_LIMIT,
             "extract_flat": True,
         }
+
+        if firefox_cookie_available():
+            ydl_opts["cookiesfrombrowser"] = ("firefox",)
 
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(source_url, download=False)
@@ -134,11 +149,6 @@ def download_entry(entry: Video) -> bool:
         "no_warnings": True,
         "format": "bestaudio/best",
         "noplaylist": True,
-        "user_agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/121.0.0.0 Safari/537.36"
-        ),
         "postprocessors": [{
             "key": "FFmpegExtractAudio",
             "preferredcodec": "mp3",
@@ -146,6 +156,9 @@ def download_entry(entry: Video) -> bool:
         }],
         "outtmpl": outtmpl,
     }
+
+    if firefox_cookie_available():
+        ydl_opts["cookiesfrombrowser"] = ("firefox",)
 
     try:
         with YoutubeDL(ydl_opts) as ydl:

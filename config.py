@@ -28,10 +28,8 @@ _cfg = load_config(CONFIG_FILE)
 SERVER3_KEY = _cfg.get("SERVER3_KEY", None)
 
 api_info = {
-    "1": {
-        "api_key": _cfg.get("API_KEY", None),
-        "url_redirect": _cfg.get("API_URL", None),
-    }
+    "api_key": _cfg.get("API_KEY", None),
+    "url_redirect": _cfg.get("API_URL", None),
 }
 
 ENTRIES_LIMIT = "1-3"
@@ -69,7 +67,7 @@ model_info = {
     },
 
     "gpt-3.5-turbo": {
-        "model": "gpt-3.5-turbo-0125",
+        "model": "gpt-3.5-turbo",
         "max_input": 16385,
         "max_output": 4096,
         "input_price": 0.0035,
@@ -77,7 +75,7 @@ model_info = {
     },
 
     "gpt-4o": {
-        "model": "gpt-4o-2024-08-06",
+        "model": "gpt-4o",
         "max_input": 10000,
         "max_output": 16384,
         "input_price": 0.0175,
@@ -85,7 +83,7 @@ model_info = {
     },
 
     "gpt-4.1-nano": {
-        "model": "gpt-4.1-nano-2025-04-14",
+        "model": "gpt-4.1-nano",
         "max_input": 1000000,
         "max_output": 32000,
         "input_price": 0.0028,
@@ -114,11 +112,7 @@ model_para = {
 
 api_model = {
     "whisper_model": "small",  # base small medium
-
-    "summarize_api": "1",  # free 1
     "summarize_model": "gpt-4.1-nano",  # gpt-4o-mini gpt-4o gpt-4.1-nano
-
-    "translate_api": "1",  # free 1
     "translate_model": "gpt-4o-mini",  # gpt-4o-mini gpt-4o gpt-4.1-nano
 }
 
@@ -197,14 +191,11 @@ def check_config() -> tuple[bool, list[str], list[str]]:
     if not isinstance(api_info, dict) or not api_info:
         missing.append("api_info is missing/empty")
     else:
-        for slot, cfg in api_info.items():
-            if not isinstance(cfg, dict):
-                errors.append(f"api_info['{slot}'] is not a dict")
-                continue
-            if not cfg.get("api_key"):
-                missing.append(f"api_info['{slot}'].api_key missing")
-            if not cfg.get("url_redirect"):
-                missing.append(f"api_info['{slot}'].url_redirect missing")
+        # new shape: api_info = {"api_key": ..., "url_redirect": ...}
+        if "api_key" not in api_info or not api_info.get("api_key"):
+            missing.append("api_info.api_key missing")
+        if "url_redirect" not in api_info or not api_info.get("url_redirect"):
+            missing.append("api_info.url_redirect missing")
 
     # ---- model_info ----
     if not isinstance(model_info, dict) or not model_info:
@@ -239,25 +230,24 @@ def check_config() -> tuple[bool, list[str], list[str]]:
     if not isinstance(api_model, dict) or not api_model:
         missing.append("api_model is missing/empty")
     else:
-        # required keys
-        for k in ("whisper_model", "summarize_api", "summarize_model", "translate_api", "translate_model"):
+        # required keys (new shape)
+        for k in ("whisper_model", "summarize_model", "translate_model"):
             if k not in api_model:
                 missing.append(f"api_model['{k}'] missing")
 
-        # slot/model existence
-        sa = api_model.get("summarize_api")
+        # model existence
         sm = api_model.get("summarize_model")
-        ta = api_model.get("translate_api")
         tm = api_model.get("translate_model")
 
-        if sa and sa not in api_info:
-            errors.append(f"api_model.summarize_api '{sa}' not found in api_info")
-        if ta and ta not in api_info:
-            errors.append(f"api_model.translate_api '{ta}' not found in api_info")
         if sm and sm not in model_info:
             errors.append(f"api_model.summarize_model '{sm}' not found in model_info")
         if tm and tm not in model_info:
             errors.append(f"api_model.translate_model '{tm}' not found in model_info")
+
+        # optional sanity: whisper model name
+        wm = api_model.get("whisper_model")
+        if wm and not isinstance(wm, str):
+            errors.append("api_model.whisper_model must be str")
 
     ok = (len(missing) == 0 and len(errors) == 0)
     return ok, missing, errors
