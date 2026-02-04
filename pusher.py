@@ -1,6 +1,8 @@
 from serverchan_sdk import sc_send
+import requests
+from datetime import datetime
 
-from config import api_model, READ_LANGUAGE, OUTPUT_DIR, SERVER3_KEY
+from config import api_model, READ_LANGUAGE, OUTPUT_DIR, SERVER3_KEY, NTFY_SERVER, REPORT_DIR
 from db import get_unpushed, update_entries
 from summarizer import request_gpt
 
@@ -11,6 +13,34 @@ def pushto_Server3(message: str) -> None:
 
     if response["code"] != 0:
         print(f"Push Error: {response}")
+
+def pushto_ntfy(message: str) -> None:
+    if NTFY_SERVER is None:
+        return 
+
+    url = f"https://ntfy.sh/{NTFY_SERVER}"
+    headers = {
+        "Title": "Briefing Summary",
+    }
+    try:
+        response = requests.post(
+            url, 
+            data=message.encode("utf-8"), 
+            headers = headers,
+            timeout=(10, 60),  # Connection timeout: 10s, Read timeout 120s
+        )
+        response.raise_for_status()
+    except Exception as e:
+        print(f"Push Error (ntfy): {e}")
+
+def pushto_localfile(message: str) -> None:
+    try:
+        now = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        log_file = REPORT_DIR / f"{now}.txt"
+        with log_file.open("w", encoding="utf-8") as f:
+            f.write(f"{message}\n")
+    except Exception:
+        pass
 
 def translate(input: str, language: str):
     response_json = request_gpt(
@@ -71,7 +101,9 @@ def pusher(session, limit: int) -> None:
     body = "\n\n".join(parts)
 
     try:
-        pushto_Server3(body)
+        #pushto_Server3(body)
+        pushto_ntfy(body)
+        pushto_localfile(body)
         update_entries(session, todo)
         print(f"Finished Sending")
     except Exception:

@@ -26,6 +26,8 @@ def load_config(path: Path) -> dict[str, str]:
 _cfg = load_config(CONFIG_FILE)
 
 SERVER3_KEY = _cfg.get("SERVER3_KEY", None)
+NTFY_SERVER = _cfg.get("NTFY_SERVER", None)
+REPORT_DIR = str(_cfg.get("REPORT_DIR", None))
 
 api_info = {
     "api_key": _cfg.get("API_KEY", None),
@@ -118,6 +120,14 @@ api_model = {
 
 
 def check_config() -> tuple[bool, list[str], list[str]]:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+    PROMPT_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    TEMPORARY_DIR.mkdir(parents=True, exist_ok=True)
+    if not REPORT_DIR is None:
+        REPORT_DIR.mkdir(parents=True, exist_ok=True)
+
     missing: list[str] = []
     errors: list[str] = []
 

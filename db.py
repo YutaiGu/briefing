@@ -42,12 +42,6 @@ class Video(Base):
     __table_args__ = (UniqueConstraint("webpage_url", name="uq_webpage_url"),)
 
 def init_db() -> None:
-    # Ensure directories exist
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    AUDIO_DIR.mkdir(parents=True, exist_ok=True)
-    PROMPT_DIR.mkdir(parents=True, exist_ok=True)
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
     # Ensure DB file & tables exist.
     Base.metadata.create_all(bind=engine)
 
