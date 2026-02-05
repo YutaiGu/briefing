@@ -2,7 +2,7 @@ import time
 from sqlalchemy.orm import Session
 
 from config import DOWNLOAD_INTERVAL, PROCESS_INTERVAL, PUSHER_LIMIT, PUSHER_INTERVAL
-from db import engine, clean_all, init_db
+from db import engine, clean_all, init_db, clean_entries
 from downloader import downloader, import_external_entries
 from transcriber import transcriber, check_whisper_model
 from summarizer import summarizer
@@ -36,6 +36,7 @@ def run() -> None:
             # ---- pusher ----
             if now - pusher_timer >= PUSHER_INTERVAL:
                 pusher(session, PUSHER_LIMIT)
+                clean_entries(session)
                 pusher_timer = now
                 time.sleep(10)
 

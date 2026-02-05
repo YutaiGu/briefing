@@ -1,13 +1,11 @@
 from sqlalchemy import create_engine, Column, Integer, String, UniqueConstraint, select
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
-import hashlib
 import shutil
 
-from config import DB_URL, DATA_DIR, AUDIO_DIR, OUTPUT_DIR, PROMPT_DIR, TEMPORARY_DIR, check_config
-
+from config import DB_URL, AUDIO_DIR, OUTPUT_DIR, TEMPORARY_DIR, check_config, UPDATE_LIMIT
 
 engine = create_engine(DB_URL, future=True)
 Base = declarative_base()
@@ -69,11 +67,8 @@ def clean_all(session) -> None:
         # AUDIO_DIR cleanup
         for p in AUDIO_DIR.iterdir():
             try:
-                if not p.is_file() or p.stem not in valid_ids:
-                    if p.is_file():
-                        p.unlink()
-                    else:
-                        shutil.rmtree(p)
+                if not p.is_file():
+                    shutil.rmtree(p)
             except Exception:
                 pass
 
@@ -92,6 +87,74 @@ def clean_all(session) -> None:
                     shutil.rmtree(d)  # delete directory recursively
                 except Exception:
                     pass
+    except Exception:
+        pass
+    print("[CLEAN] Finished.")
+
+def clean_entries(session) -> int:
+    """
+    Delete ONLY fully processed entries.
+    - local: delete fully processed entries older than 1 day (by inserted_at).
+    - non-local: for each source, keep latest ENTRIES_LIMIT entries.
+    """
+    deleted = 0
+    cutoff = datetime.now() - timedelta(days=1)
+
+    try:
+        rows = (
+            session.query(Video).filter(
+                Video.downloaded == 1,
+                Video.transcribed == 1,
+                Video.summarized == 1,
+                Video.pushed == 1,
+            )
+            .order_by(Video.downloaded_at.desc())
+            .all()
+        )
+
+        local_rows = []
+        by_source = {}
+        to_delete = []
+        for v in rows:
+            if v.source == "local":
+                local_rows.append(v)
+            else:
+                by_source.setdefault(v.source, []).append(v)
+
+        # local rule
+        for v in local_rows:
+            ts = datetime.strptime(v.inserted_at, "%Y%m%d")
+            if ts < cutoff:
+                session.delete(v)
+                to_delete.append(v.video_id)
+                deleted += 1
+
+        # yt-dlp rule
+        for src, src_rows in by_source.items():
+            # already sorted by downloaded_at
+            for v in src_rows[UPDATE_LIMIT:]:
+                session.delete(v)
+                to_delete.append(v.video_id)
+                deleted += 1
+
+        session.commit()
+        for vid in to_delete:
+            print(f"[DELETE] {vid}")
+            delete_audio(vid)
+        
+        return deleted
+    except Exception:
+        session.rollback()
+        return deleted
+
+def delete_audio(video_id: str) -> None:
+    try:
+        for p in AUDIO_DIR.glob(f"{video_id}.*"):
+            try:
+                if p.is_file():
+                    p.unlink()
+            except Exception:
+                pass
     except Exception:
         pass
 
