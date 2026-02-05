@@ -20,7 +20,7 @@ def run() -> None:
         with Session(engine, future=True) as session:
             # ---- downloader ----
             if now - download_timer >= DOWNLOAD_INTERVAL:
-                #downloader(session)
+                downloader(session)
                 download_timer = now
                 time.sleep(10)
 

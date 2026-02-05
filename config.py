@@ -6,6 +6,7 @@ AUDIO_DIR = DATA_DIR / "audio"
 PROMPT_DIR = DATA_DIR / "prompts"
 OUTPUT_DIR = DATA_DIR / "output"
 TEMPORARY_DIR = DATA_DIR / "temporary"
+PENDING_FILE = DATA_DIR / ".pending.json"
 SOURCE_FILE = DATA_DIR / "channels.txt"
 CONFIG_FILE = DATA_DIR / "config.txt"
 DB_URL = f"sqlite:///{(DATA_DIR / 'db.sqlite3').as_posix()}"
@@ -27,7 +28,8 @@ _cfg = load_config(CONFIG_FILE)
 
 SERVER3_KEY = _cfg.get("SERVER3_KEY", None)
 NTFY_SERVER = _cfg.get("NTFY_SERVER", None)
-REPORT_DIR = str(_cfg.get("REPORT_DIR", None))
+REPORT_DIR = _cfg.get("REPORT_DIR", None)
+REPORT_DIR = Path(REPORT_DIR) if REPORT_DIR else None
 
 api_info = {
     "api_key": _cfg.get("API_KEY", None),
@@ -140,6 +142,7 @@ def check_config() -> tuple[bool, list[str], list[str]]:
         "OUTPUT_DIR": OUTPUT_DIR,
         "TEMPORARY_DIR": TEMPORARY_DIR,
         "SOURCE_FILE": SOURCE_FILE,
+        "PENDING_FILE": PENDING_FILE,
     }
     for k, p in required_paths.items():
         if not isinstance(p, Path):

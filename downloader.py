@@ -1,8 +1,9 @@
 from yt_dlp import YoutubeDL
 from datetime import datetime
 import hashlib
+import json
 
-from config import AUDIO_DIR, ENTRIES_LIMIT, SOURCE_URLS, UPDATE_LIMIT
+from config import AUDIO_DIR, ENTRIES_LIMIT, SOURCE_URLS, UPDATE_LIMIT, PENDING_FILE
 from db import Video, update_entries, init_entries, get_undownloaded, get_entries_by_ids, save_entries
 
 def downloader(session) -> None:
@@ -186,35 +187,55 @@ def import_external_entries(session):
     # Scan AUDIO_DIR for audio files not in DB and insert them for transcription.
     now = datetime.now()
     inserted_at = now.strftime("%Y%m%d")
+    PARTIAL_SUFFIXES = {".part", ".tmp", ".download"}
+    Video_SUFFIXES = {
+        ".mp3", ".wav", ".m4a", ".aac", ".mp4", ".mkv", ".mov", ".avi", ".webm", ".flv"
+    }
+    min_size = 200 * 1024  # 200KB
+    try:
+        pending = json.loads(PENDING_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        pending = {}
+    pending_dirty = False
 
     for p in AUDIO_DIR.iterdir():
         try:
             if not p.is_file():
                 continue
-            
-            # skip if downloading
-            PARTIAL_SUFFIXES = {".part", ".tmp", ".download"}
-            Video_SUFFIXES = {
-                ".mp3", ".wav", ".m4a", ".aac", ".mp4", ".mkv", ".mov", ".avi", ".webm", ".flv"
-            }
             suf = p.suffix.lower()
             if suf in PARTIAL_SUFFIXES:
                 continue
             if suf not in Video_SUFFIXES:
                 continue
-            stem = p.stem
-            downloading = any((AUDIO_DIR / f"{stem}{ps}").exists() for ps in PARTIAL_SUFFIXES)
-            if downloading:
-                continue
 
             # skip very recent files (still being written)
-            if (now.timestamp() - p.stat().st_mtime) < 60:
+            st = p.stat()
+            if st.st_size < min_size:
                 continue
-
+            if (now.timestamp() - st.st_mtime) < 60:
+                continue
+            
+            # skip exist file
             filename = p.stem
             exists = get_entries_by_ids(session, [filename])
             if exists:
                 continue
+
+            # stable-size 2-pass gate
+            key = str(p.resolve())
+            prev = pending.get(key)
+            if prev is None:
+                pending[key] = {"size": st.st_size, "mtime": st.st_mtime}
+                pending_dirty = True
+                continue
+            if prev.get("size") != st.st_size or prev.get("mtime") != st.st_mtime:
+                pending[key] = {"size": st.st_size, "mtime": st.st_mtime}
+                pending_dirty = True
+                continue
+            # stable now
+            pending.pop(key, None)
+            pending_dirty = True
+            
             local_id = make_local_audio_id(filename)
             new_path = p.with_name(f"{local_id}{p.suffix.lower()}")
             entry = Video(
@@ -243,4 +264,10 @@ def import_external_entries(session):
             session.rollback()
             pass
 
+    if pending_dirty:
+        try:
+            PENDING_FILE.write_text(json.dumps(pending, ensure_ascii=False, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+    
     return 
