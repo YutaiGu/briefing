@@ -6,7 +6,7 @@ import whisper
 from moviepy import AudioFileClip
 from multiprocessing import Pool, cpu_count
 
-from config import DATA_DIR, api_model, TRANSCRIBER_LIMIT
+from config import DATA_DIR, api_model, TRANSCRIBER_LIMIT, POOL_NUM
 from db import get_untranscribed, update_entries
 
 _MODEL = None
@@ -27,7 +27,7 @@ def transcriber(session) -> None:
     if not todo:
         return
 
-    workers = min(cpu_count(), 2)
+    workers = min(cpu_count(), POOL_NUM)
     with Pool(processes=workers) as pool:
         for updated in pool.imap(one_transcriber, todo):
             if updated is None:

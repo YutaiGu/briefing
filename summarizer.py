@@ -6,7 +6,7 @@ from pathlib import Path
 from multiprocessing import Pool, cpu_count
 
 from config import api_info, model_info, model_para, api_model, OUTPUT_DIR
-from config import SUMMARIZER_LIMIT
+from config import SUMMARIZER_LIMIT, POOL_NUM
 from db import get_unsummarized, update_entries
 
 def one_summarizer(entry):
@@ -23,7 +23,7 @@ def summarizer(session) -> None:
     if not todo:
         return
 
-    workers = min(cpu_count(), 2)
+    workers = min(cpu_count(), POOL_NUM)
     with Pool(processes=workers) as pool:
         for updated in pool.imap(one_summarizer, todo):
             if updated is None:
