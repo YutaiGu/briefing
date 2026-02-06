@@ -1,7 +1,12 @@
 import time
 from sqlalchemy.orm import Session
+import os
+from pathlib import Path
+from config import DOWNLOAD_INTERVAL, PROCESS_INTERVAL, PUSHER_LIMIT, PUSHER_INTERVAL, DATA_DIR
 
-from config import DOWNLOAD_INTERVAL, PROCESS_INTERVAL, PUSHER_LIMIT, PUSHER_INTERVAL
+FFMPEG_DIR = DATA_DIR / "ffmpeg"
+os.environ["PATH"] = str(FFMPEG_DIR) + os.pathsep + os.environ.get("PATH", "")
+
 from db import engine, clean_all, init_db, clean_entries
 from downloader import downloader, import_external_entries
 from transcriber import transcriber, check_whisper_model

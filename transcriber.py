@@ -3,6 +3,7 @@ from pathlib import Path
 from datetime import datetime
 import torch
 import whisper
+import shutil
 from moviepy import AudioFileClip
 from multiprocessing import Pool, cpu_count
 
@@ -35,7 +36,11 @@ def transcriber(session) -> None:
             update_entries(session, [updated])
 
 def check_whisper_model() -> None:
-    # download + load whisper model at startup to avoid first-run failures.
+    # 1) ensure ffmpeg is available
+    if not shutil.which("ffmpeg"):
+        raise RuntimeError("ffmpeg not found in PATH")
+    
+    # 2) ensure whisper is available
     model_name = api_model["whisper_model"]
     try:
         _ = whisper.load_model(model_name)

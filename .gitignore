@@ -9,6 +9,8 @@ __pycache__/
 /data/*
 !/data/prompts/
 !/data/prompts/**
+!/data/ffmpeg/
+!/data/ffmpeg/**
 
 # ---------- Secrets ----------
 /data/config.txt
