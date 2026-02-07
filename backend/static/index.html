@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Runner Panel</title>
+  <style>
+    :root { font-family: "Segoe UI", system-ui, sans-serif; }
+    body { margin: 0; background: #f6f7fb; color: #1c1f23; }
+    .shell { max-width: 1100px; margin: 32px auto; padding: 0 20px; display: grid; gap: 20px; }
+    h2 { margin: 0 0 8px; }
+    section { background: #fff; border: 1px solid #e2e5ec; border-radius: 10px; padding: 16px 18px; box-shadow: 0 4px 14px rgba(0,0,0,0.04); }
+    .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+    input, select { padding: 8px 10px; border: 1px solid #cfd5e0; border-radius: 6px; font-size: 14px; }
+    button { padding: 8px 14px; border: 1px solid #1f6feb; background: #1f6feb; color: #fff; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    button[disabled] { opacity: 0.5; cursor: not-allowed; }
+    .muted { color: #6b7280; }
+    .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .logbox { background: #111; color: #0f0; padding: 12px; border-radius: 8px; max-height: 340px; overflow-y: auto; white-space: pre-wrap; font-family: "Cascadia Code", Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <h2>Briefing Panel</h2>
+    </header>
+
+    <details id="cfg-accordion">
+      <summary style="cursor:pointer;font-weight:600;">Config Panel</summary>
+      <div style="margin-top:12px;">
+        <div id="config-grid" class="grid"></div>
+        <button id="save-btn" style="margin-top:12px;">Save Config</button>
+        <span id="save-status" class="muted"></span>
+      </div>
+    </details>
+
+    <details id="channels-accordion" style="margin-top:8px;">
+      <summary style="cursor:pointer;font-weight:600;">Channels</summary>
+      <div style="margin-top:12px;">
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;">
+          SOURCE_URLS (One line per item)
+          <textarea id="channels-input" style="min-height:140px;padding:8px;border:1px solid #cfd5e0;border-radius:6px;font-family:monospace;"></textarea>
+        </label>
+        <button id="save-channels-btn" style="margin-top:12px;">Save Channels</button>
+        <span id="channels-status" class="muted"></span>
+      </div>
+    </details>
+
+    <section class="row">
+      <h3 style="margin:0;">Control Panel</h3>
+      <button id="run-btn">Run</button>
+      <button id="stop-btn">Stop</button>
+      <span id="status-text" class="muted">Status: -</span>
+    </section>
+
+    <section>
+      <h3>Log Viewer</h3>
+      <div id="logbox" class="logbox"></div>
+    </section>
+  </div>
+
+  <script>
+    let config = null;
+    let schema = [];
+    let skipFirstLog = true;
+
+    const cfgGrid = document.getElementById("config-grid");
+    const saveBtn = document.getElementById("save-btn");
+    const saveStatus = document.getElementById("save-status");
+    const channelsInput = document.getElementById("channels-input");
+    const saveChannelsBtn = document.getElementById("save-channels-btn");
+    const channelsStatus = document.getElementById("channels-status");
+    const statusText = document.getElementById("status-text");
+    const runBtn = document.getElementById("run-btn");
+    const stopBtn = document.getElementById("stop-btn");
+    const logbox = document.getElementById("logbox");
+
+    async function fetchSchema() {
+      const res = await fetch("/api/schema");
+      const data = await res.json();
+      schema = data.fields || [];
+    }
+
+    async function fetchConfig() {
+      const res = await fetch("/api/config");
+      config = await res.json();
+      renderConfig();
+    }
+
+    function renderConfig() {
+      cfgGrid.innerHTML = "";
+      schema.forEach(f => {
+        if (f.name === "SOURCE_URLS") return; // channels handled separately
+        const value = getValueByPath(config, f.name);
+        cfgGrid.appendChild(fieldFromSchema(f, value));
+      });
+    }
+
+    function renderChannels() {
+      const list = Array.isArray(config?.SOURCE_URLS) ? config.SOURCE_URLS : [];
+      channelsInput.value = list.join("\n");
+    }
+
+    function fieldFromSchema(f, value) {
+      const displayValue = deriveDisplayValue(f, value);
+      const label = document.createElement("label");
+      label.textContent = f.name;
+      let el;
+      if (f.type === "select") {
+        el = document.createElement("select");
+        const choices = Array.isArray(f.choices) ? f.choices : [];
+        const selectedValue = choices.includes(displayValue) ? displayValue : (f.default ?? choices[0] ?? "");
+        choices.forEach(opt => {
+          const o = document.createElement("option");
+          o.value = opt;
+          o.textContent = opt;
+          if (opt === selectedValue) o.selected = true;
+          el.appendChild(o);
+        });
+      } else if (f.type === "int" || f.type === "int_optional" || f.type === "int_range") {
+        el = document.createElement("input");
+        el.type = "number";
+        el.value = displayValue ?? "";
+        if (f.min !== undefined) el.min = f.min;
+        if (f.max !== undefined) el.max = f.max;
+      } else {
+        el = document.createElement("input");
+        el.type = "text";
+        el.value = displayValue ?? "";
+      }
+      el.onchange = (e) => updateField(f.name, e.target.value);
+      label.appendChild(el);
+      return label;
+    }
+
+    function deriveDisplayValue(f, value) {
+      if (f.type === "int_range") {
+        if (typeof value === "string" && value.includes("-")) {
+          const parts = value.split("-");
+          return parts[1] || parts[0];
+        }
+      }
+      return value;
+    }
+
+    function getValueByPath(obj, path) {
+      return path.split(".").reduce((acc, key) => acc && acc[key] !== undefined ? acc[key] : null, obj);
+    }
+
+    function updateField(path, val) {
+      if (path.startsWith("api_model.")) {
+        const key = path.split(".")[1];
+        config.api_model[key] = val;
+      } else if (path === "SOURCE_URLS") {
+        const list = val
+          .split(/\r?\n/)
+          .map(x => x.trim())
+          .filter(Boolean);
+        config.SOURCE_URLS = list;
+      } else {
+        config[path] = val;
+      }
+    }
+
+    saveBtn.onclick = async () => {
+      saveStatus.textContent = "Saving...";
+      const payload = config;
+      const res = await fetch("/api/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        config = await res.json();
+        renderConfig();
+        renderChannels();
+        saveStatus.textContent = "Saved";
+      } else {
+        saveStatus.textContent = "Failed to save";
+      }
+      setTimeout(() => saveStatus.textContent = "", 1500);
+    };
+
+    saveChannelsBtn.onclick = async () => {
+      updateField("SOURCE_URLS", channelsInput.value);
+      saveStatus.textContent = "Saving...";
+      const res = await fetch("/api/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config)
+      });
+      if (res.ok) {
+        config = await res.json();
+        renderConfig();
+        renderChannels();
+        channelsStatus.textContent = "Saved";
+      } else {
+        channelsStatus.textContent = "Failed to save";
+      }
+      setTimeout(() => { saveStatus.textContent = ""; channelsStatus.textContent = ""; }, 1500);
+    };
+
+    runBtn.onclick = async () => {
+      const res = await fetch("/api/run", { method: "POST" });
+      if (res.status === 409) alert("Already running");
+      await fetchStatus();
+    };
+
+    stopBtn.onclick = async () => {
+      const res = await fetch("/api/stop", { method: "POST" });
+      if (res.status === 409) alert("Not running");
+      await fetchStatus();
+    };
+
+    async function fetchStatus() {
+      const res = await fetch("/api/status");
+      const data = await res.json();
+      statusText.textContent = data.running ? `Status: running (pid ${data.pid})` : "Status: stopped";
+      runBtn.disabled = data.running;
+      stopBtn.disabled = !data.running;
+    }
+
+    async function fetchLog() {
+      if (skipFirstLog) { logbox.textContent = ""; skipFirstLog = false; return; }
+      const res = await fetch("/api/log?tail=4000");
+      const data = await res.json();
+      logbox.textContent = data.log || "";
+      logbox.scrollTop = logbox.scrollHeight;
+    }
+
+    // intervals
+    async function stopSilently() {
+      try { await fetch("/api/stop", { method: "POST" }); } catch (_) {}
+    }
+
+    async function clearLogFile() {
+      try { await fetch("/api/log/clear", { method: "POST" }); } catch (_) {}
+      logbox.textContent = "";
+      skipFirstLog = true;
+    }
+
+    (async () => {
+      logbox.textContent = "";
+      await fetchSchema();
+      await fetchConfig();
+      renderChannels();
+      await stopSilently(); // ensure status starts stopped
+      await clearLogFile(); // clear historical logs
+      fetchStatus();
+      fetchLog();
+      setInterval(fetchStatus, 2000);
+      setInterval(fetchLog, 1000);
+    })();
+  </script>
+</body>
+</html>

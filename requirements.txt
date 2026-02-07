@@ -12,3 +12,7 @@ yt-dlp
 sqlalchemy
 serverchan_sdk
 pyinstaller
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv

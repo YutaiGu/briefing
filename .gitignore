@@ -1,17 +1,24 @@
-# ---------- IDE ----------
-.idea/
+*
+!.gitignore
+!requirements.txt
+!*.py
 
-# ---------- Python ----------
-__pycache__/
-*.pyc
+# allow traversal
+!backend/
+!backend/app/
+!backend/static/
+!backend/app/data/
 
-# ---------- Runtime data ----------
-/data/*
-!/data/prompts/
-!/data/prompts/**
-!/data/ffmpeg/
-!/data/ffmpeg/**
+# allow backend files
+!backend/app/*.py
+!backend/static/**
+!backend/app/data/config.json
 
-# ---------- Secrets ----------
-/data/config.txt
-.env
+# allow traversal
+!data/
+!data/prompts/
+!data/ffmpeg/
+
+# allow data resources
+!data/prompts/**
+!data/ffmpeg/**
