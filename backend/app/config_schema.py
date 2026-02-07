@@ -32,7 +32,7 @@ SCHEMA: List[Dict[str, Any]] = [
         "name": "summarize_model",
         "type": "select",
         "default": "gpt-4.1-nano",
-        "choices": ["gpt-4.1-nano", "gpt-4o-mini", "gpt-4o"],
+        "choices": ["gpt-4.1-nano"],
     },
     {
         "name": "translate_model",

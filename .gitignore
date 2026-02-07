@@ -2,6 +2,10 @@
 !.gitignore
 !requirements.txt
 !*.py
+!images/
+!images/**
+!README.md
+!README_CN.md
 
 # allow traversal
 !backend/
