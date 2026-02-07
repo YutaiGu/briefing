@@ -2,7 +2,7 @@ from serverchan_sdk import sc_send
 import requests
 from datetime import datetime
 
-from config import api_model, READ_LANGUAGE, OUTPUT_DIR, SERVER3_KEY, NTFY_SERVER, REPORT_DIR
+from config import api_model, READ_LANGUAGE, OUTPUT_DIR, SERVER3_KEY, NTFY_SERVER, REPORT_DIR, COMPRESS_LEVEl
 from db import get_unpushed, update_entries
 from summarizer import request_gpt
 
@@ -42,12 +42,35 @@ def pushto_localfile(message: str) -> None:
     except Exception:
         pass
 
-def translate(input: str, language: str):
-    response_json = request_gpt(
-        input,
-        f"You are a translation engine. Your task is to translate the user input into {language}. Output only the translation. Do not add any commentary, prefixes, suffixes, or explanations. Preserve the original formatting exactly.",
-        api_model["translate_model"],
-    )
+def translate_and_compress(input: str, language: str):
+    if language not in ("en", "en-us", "english", "English") and COMPRESS_LEVEl != 100:  # translate + compress
+        response_json = request_gpt(
+            input,
+            f"Translate the user input into {language}. Translate the user input into {language}. Compress the content to approximately {COMPRESS_LEVEl}% of the original length. Preserve the core thesis, key financial facts, and the overall reasoning structure. Merge related arguments that support the same conclusion. Eliminate repeated arguments, illustrative restatements, and secondary justifications. Maintain logical coherence and emphasis, but do not preserve one-to-one paragraph mapping. Output only the translation.",
+            api_model["translate_model"],
+        )
+    elif language not in ("en", "en-us", "english", "English") and COMPRESS_LEVEl == 100:  # translate
+        response_json = request_gpt(
+            input,
+            f"You are a translation engine. Your task is to translate the user input into {language}. Output only the translation. Do not add any commentary, prefixes, suffixes, or explanations. Preserve the original formatting exactly.",
+            api_model["translate_model"],
+        )
+    elif COMPRESS_LEVEl != 100:  # compress
+        response_json = request_gpt(
+            input,
+            f"Compress the content to approximately {COMPRESS_LEVEl}% of the original length. Preserve the core thesis, key financial facts, and the overall reasoning structure. Merge related arguments that support the same conclusion. Eliminate repeated arguments, illustrative restatements, and secondary justifications. Maintain logical coherence and emphasis, but do not preserve one-to-one paragraph mapping. Output only the translation.",
+            api_model["translate_model"],
+        )
+    else:  # origin
+        return {
+            "choices": [
+                {
+                    "message": {
+                        "content": input
+                    }
+                }
+            ]
+        }
     return response_json
 
 def pusher(session, limit: int) -> None:
@@ -75,13 +98,11 @@ def pusher(session, limit: int) -> None:
             if not text:
                 continue
             
-            language = READ_LANGUAGE
-            if language and language not in ("en", "en-us", "english", "English"):
-                try:
-                    print(f"[Translating] {v.video_id}")
-                    text = translate(text, language)['choices'][0]['message']['content']
-                except Exception:
-                    pass
+            try:
+                print(f"[Translating & Compressing] {v.video_id}")
+                text = translate_and_compress(text, READ_LANGUAGE)['choices'][0]['message']['content']
+            except Exception:
+                pass
             
             # translate if needed
             parts.append(
@@ -103,7 +124,7 @@ def pusher(session, limit: int) -> None:
     try:
         #pushto_Server3(body)
         pushto_ntfy(body)
-        pushto_localfile(body)
+        #pushto_localfile(body)
         update_entries(session, todo)
         print(f"Finished Sending")
     except Exception:

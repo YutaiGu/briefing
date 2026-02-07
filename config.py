@@ -46,6 +46,7 @@ DOWNLOAD_INTERVAL = 6 * 60 * 60
 PROCESS_INTERVAL = 1 * 10 * 60
 PUSHER_INTERVAL = 1 * 10 * 60
 READ_LANGUAGE = "chinese"
+COMPRESS_LEVEl = 50
 
 def load_source_urls(path: Path) -> list[str]:
     if not path.exists():
