@@ -89,7 +89,7 @@ def clean_all(session) -> None:
                     pass
     except Exception:
         pass
-    print("[CLEAN] Finished.")
+    print("[CLEAN] Finished.\n")
 
 def clean_entries(session) -> int:
     """
