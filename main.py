@@ -1,12 +1,15 @@
-import time
-from sqlalchemy.orm import Session
-import os
 from pathlib import Path
-from config import DOWNLOAD_INTERVAL, PROCESS_INTERVAL, PUSHER_LIMIT, PUSHER_INTERVAL, DATA_DIR
+import json
+import os
 
-FFMPEG_DIR = DATA_DIR / "ffmpeg"
+CONFIG_PATH = Path(__file__).parent / "backend" / "data" / "config.json"
+FFMPEG_DIR = Path(__file__).parent / "data" / "ffmpeg"
 os.environ["PATH"] = str(FFMPEG_DIR) + os.pathsep + os.environ.get("PATH", "")
 
+import time
+from sqlalchemy.orm import Session
+
+from config import DOWNLOAD_INTERVAL, PROCESS_INTERVAL, PUSHER_LIMIT, PUSHER_INTERVAL
 from db import engine, clean_all, init_db, clean_entries
 from downloader import downloader, import_external_entries
 from transcriber import transcriber, check_whisper_model
@@ -45,7 +48,19 @@ def run() -> None:
                 pusher_timer = now
                 time.sleep(10)
 
-if __name__ == "__main__":
+def load_config():
+    if not CONFIG_PATH.exists():
+        raise FileNotFoundError(
+            f"Config not found at {CONFIG_PATH}. Start the API once to generate defaults."
+        )
+    with CONFIG_PATH.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+def main():
+    load_config()
     init_db()
     check_whisper_model()
     run()
+
+if __name__ == "__main__":
+    main()
