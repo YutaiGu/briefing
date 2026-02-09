@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/python-3.10-blue?style=flat)
 ![Status](https://img.shields.io/badge/status-active-success?style=flat)
-![License](https://img.shields.io/github/license/YutaiGu/VideoBriefing?style=flat)
+![License](https://img.shields.io/github/license/YutaiGu/briefing?style=flat)
 
 [中文](README_CN.md)
 
