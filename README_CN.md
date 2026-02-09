@@ -1,10 +1,8 @@
 # Video Monitoring & Summarization Service
 
 ![Python](https://img.shields.io/badge/python-3.10-blue?style=flat)
-
 ![Status](https://img.shields.io/badge/status-active-success?style=flat)
-
-![License](https://img.shields.io/github/license/你的用户名/VideoBriefing?style=flat)
+![License](https://img.shields.io/github/license/YutaiGu/VideoBriefing?style=flat)
 
 [English](README_EN.md)
 
