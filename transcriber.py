@@ -8,17 +8,16 @@ from moviepy import AudioFileClip
 from multiprocessing import Pool, cpu_count
 
 from config import DATA_DIR, api_model, TRANSCRIBER_LIMIT, POOL_NUM
-from db import get_untranscribed, update_entries
+from db import get_untranscribed, update_entries, entry_to_payload, payload_to_entry
 
 _MODEL = None
-_MODEL_NAME = None
 
-def one_transcriber(entry):
+def one_transcriber(payload):
     try:
-        print(f"Transcribing {entry.video_id}")
-        entry = Video_Processing(entry)
-        entry.transcribed = 1  # Mark only after final success
-        return entry
+        print(f"Transcribing {payload['video_id']}")
+        payload = Video_Processing(payload)
+        payload['transcribed'] = 1  # Mark only after final success
+        return payload
     except Exception as e:
         print(f"Error from one_transcriber: {e}")
         return None
@@ -30,10 +29,11 @@ def transcriber(session) -> None:
 
     workers = min(cpu_count(), POOL_NUM)
     with Pool(processes=workers) as pool:
-        for updated in pool.imap(one_transcriber, todo):
+        payloads = [entry_to_payload(v) for v in todo]
+        for updated in pool.imap(one_transcriber, payloads):
             if updated is None:
                 continue
-            update_entries(session, [updated])
+            update_entries(session, [payload_to_entry(updated)])
 
 def check_whisper_model() -> None:
     # 1) ensure ffmpeg is available
@@ -117,8 +117,8 @@ def Whisper_Audio(video_file, language=None):
     return result["text"]
 
 
-def Video_Processing(entry):
-    raw = entry.language
+def Video_Processing(payload):
+    raw = payload['language']
     language = None
     if raw:
         raw = raw.lower()
@@ -128,7 +128,7 @@ def Video_Processing(entry):
             language = "zh"
         # else:
             # language = raw.split("-")[0]
-    video_file = entry.file_path
+    video_file = payload['file_path']
     filename = os.path.basename(video_file).split('.')[0]
     print(f"[START] {filename}")
     start_time = datetime.now()
@@ -169,4 +169,4 @@ def Video_Processing(entry):
     Clean_Files(filename, temporary_dir)  # 清除视频文件
     print(f"[CLEAN DONE] {filename}")
 
-    return entry
+    return payload

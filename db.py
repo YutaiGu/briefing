@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, Column, Integer, String, UniqueConstraint, select
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.inspection import inspect
 from datetime import datetime, timedelta
 from pathlib import Path
 import shutil
@@ -65,10 +66,13 @@ def clean_all(session) -> None:
         }
 
         # AUDIO_DIR cleanup
-        for p in AUDIO_DIR.iterdir():
+        for p in AUDIO_DIR.rglob("*"):
             try:
-                if not p.is_file():
-                    shutil.rmtree(p)
+                if p.is_dir():
+                    if not any(p.iterdir()):
+                        p.rmdir()
+                elif p.is_file():
+                    continue
             except Exception:
                 pass
 
@@ -149,7 +153,7 @@ def clean_entries(session) -> int:
 
 def delete_audio(video_id: str) -> None:
     try:
-        for p in AUDIO_DIR.glob(f"{video_id}.*"):
+        for p in AUDIO_DIR.rglob(f"{video_id}.*"):
             try:
                 if p.is_file():
                     p.unlink()
@@ -220,6 +224,18 @@ def init_entries(session, entries) -> int:
             print(f"Save error on {row.webpage_url}: {type(ex).__name__}: {ex}")
 
     return inserted
+
+def entry_to_payload(v: Video) -> dict:
+    return {
+        c.key: getattr(v, c.key)
+        for c in inspect(Video).mapper.column_attrs
+    }
+
+def payload_to_entry(payload: dict) -> Video:
+    v = Video()
+    for k, val in payload.items():
+        setattr(v, k, val)
+    return v
 
 def save_entries(session, entries: list[Video]) -> int:
     inserted = 0

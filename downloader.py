@@ -198,7 +198,7 @@ def import_external_entries(session):
         pending = {}
     pending_dirty = False
 
-    for p in AUDIO_DIR.iterdir():
+    for p in AUDIO_DIR.rglob("*"):
         try:
             if not p.is_file():
                 continue

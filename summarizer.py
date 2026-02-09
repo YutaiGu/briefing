@@ -7,14 +7,14 @@ from multiprocessing import Pool, cpu_count
 
 from config import api_info, model_info, model_para, api_model, OUTPUT_DIR
 from config import SUMMARIZER_LIMIT, POOL_NUM
-from db import get_unsummarized, update_entries
+from db import get_unsummarized, update_entries, entry_to_payload, payload_to_entry
 
-def one_summarizer(entry):
+def one_summarizer(payload):
     try:
-        print(f"Summarizing {entry.video_id}")
-        entry = Text_Processing(entry)
-        entry.summarized = 1  # Mark only after final success
-        return entry
+        print(f"Summarizing {payload['video_id']}")
+        payload = Text_Processing(payload)
+        payload['summarized'] = 1  # Mark only after final success
+        return payload
     except Exception:
         return None
 
@@ -25,10 +25,11 @@ def summarizer(session) -> None:
 
     workers = min(cpu_count(), POOL_NUM)
     with Pool(processes=workers) as pool:
-        for updated in pool.imap(one_summarizer, todo):
+        payloads = [entry_to_payload(v) for v in todo]
+        for updated in pool.imap(one_summarizer, payloads):
             if updated is None:
                 continue
-            update_entries(session, [updated])
+            update_entries(session, [payload_to_entry(updated)])
 
 def request_gpt(input, system_content, model):
     '''
@@ -139,8 +140,8 @@ def summarizer_request_gpt(input, which_system, model):
 
     return response_txt, history
 
-def Text_Processing(entry):
-    file_name = Path(entry.file_path).stem
+def Text_Processing(payload):
+    file_name = Path(payload['file_path']).stem
     if not file_name:
         raise ValueError("file_name is required")
     
@@ -213,4 +214,4 @@ def Text_Processing(entry):
     )
     paths["brief"].write_text(brief_text, encoding="utf-8")
 
-    return entry
+    return payload

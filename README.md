@@ -4,10 +4,14 @@
 
 ## 1. Overview
 
-This project is a backend service designed for **automatically tracking and summarizing long-form video content**.
+This is a backend service for **automatically tracking the creators you follow** and **summarizing their newly published videos**.
 
-The system periodically monitors specified creators, retrieves newly published videos, and automatically performs **video downloading, speech transcription, and content refinement**.
-It then generates a **structured and concise summary report**, which is pushed to a designated receiver, allowing users to efficiently obtain **high-frequency, high-value information** without watching the full video.
+The system periodically checks whether specified creators have released new videos,
+automatically performs **download → transcription → content refinement**,
+and delivers **structured, concise summary reports** to the configured destination.
+
+This enables you to quickly grasp the **core viewpoints and high-frequency insights**
+from a large volume of creator content in a very short amount of time.
 
 Currently supported platforms:
 
@@ -18,6 +22,10 @@ Currently supported platforms:
 
 ## 2. Feature Preview
 
+### 1. Run Panel
+![panel](images/2.png)
+
+### 2. Send Summary to Terminal
 ![panel](images/1.png)
 
 ---
@@ -79,7 +87,19 @@ This file should not be committed to the repository.
 
 ---
 
-### 3.5 Running the Service
+### 3.5 Source URLs
+
+![3](images/3.png)
+
+---
+
+### 3.6 Firefox Cookie Support (Optional)
+
+If Firefox is installed on this machine and you have previously logged into video sites, the downloader will automatically read cookies from the default Firefox profile to handle videos accessible only after login. No additional configuration is required—simply ensure Firefox has downloaded and used content before starting the service.
+
+---
+
+### 3.7 Running the Service
 
 After configuring the environment and required settings, start the backend service from the project root directory.
 
