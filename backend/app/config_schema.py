@@ -13,7 +13,7 @@ SCHEMA: List[Dict[str, Any]] = [
         "choices": ["chinese", "english"],
     },
     {"name": "UPDATE_LIMIT", "type": "int", "default": 3, "min": 1, "max": 20},
-    {"name": "POOL_NUM", "type": "int", "default": 1, "min": 1, "max": 16},
+    {"name": "POOL_NUM", "type": "int", "default": 2, "min": 1, "max": 16},
     {"name": "TRANSCRIBER_LIMIT", "type": "int_optional", "default": None, "min": 1, "max": 20},
     {"name": "SUMMARIZER_LIMIT", "type": "int_optional", "default": None, "min": 1, "max": 20},
     {"name": "PUSHER_LIMIT", "type": "int", "default": 5, "min": 1, "max": 20},
@@ -25,7 +25,7 @@ SCHEMA: List[Dict[str, Any]] = [
     {
         "name": "whisper_model",
         "type": "select",
-        "default": "small",
+        "default": "medium",
         "choices": ["tiny", "small", "medium", "large"],
     },
     {
