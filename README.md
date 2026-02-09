@@ -1,5 +1,11 @@
 # Video Monitoring & Summarization Service
 
+![Python](https://img.shields.io/badge/python-3.10-blue?style=flat)
+
+![Status](https://img.shields.io/badge/status-active-success?style=flat)
+
+![License](https://img.shields.io/github/license/你的用户名/VideoBriefing?style=flat)
+
 [中文](README_CN.md)
 
 ## 1. Overview
@@ -93,7 +99,7 @@ This file should not be committed to the repository.
 
 ---
 
-### 3.6 Firefox Cookie Support (Optional)
+### 3.6 Firefox Cookie Support (Recommend)
 
 If Firefox is installed on this machine and you have previously logged into video sites, the downloader will automatically read cookies from the default Firefox profile to handle videos accessible only after login. No additional configuration is required—simply ensure Firefox has downloaded and used content before starting the service.
 

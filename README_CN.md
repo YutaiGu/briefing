@@ -1,5 +1,11 @@
 # Video Monitoring & Summarization Service
 
+![Python](https://img.shields.io/badge/python-3.10-blue?style=flat)
+
+![Status](https://img.shields.io/badge/status-active-success?style=flat)
+
+![License](https://img.shields.io/github/license/你的用户名/VideoBriefing?style=flat)
+
 [English](README_EN.md)
 
 ## 1. 功能简介
@@ -63,7 +69,7 @@ OpenAI官方文档
 
 ---
 
-### 3.6 Firefox Cookies（推荐）
+### 3.6 Firefox（推荐）
 
 如果本机安装了 Firefox 并且曾经登录过视频站点，下载器会自动读取默认 Firefox 配置文件的 cookies，用于处理仅登录可见的视频。无需额外配置，启动服务前保持 Firefox 已下载且使用过即可。
 
