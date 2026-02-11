@@ -89,9 +89,9 @@ def pusher(session, limit: int) -> None:
                 continue
             
             print(f"[Packing] {v.video_id}")
-            upload_date = v.upload_date or ""
+            upload_date = v.upload_date or v.downloaded_at or v.inserted_at or ""
             extractor = v.extractor or ""
-            source = v.source or ""
+            source = (v.source or "").replace("https://www.", "").replace("http://www.", "")
             title = v.title or ""
 
             text = brief_path.read_text(encoding="utf-8").strip()
@@ -106,12 +106,10 @@ def pusher(session, limit: int) -> None:
             
             # translate if needed
             parts.append(
-                f"# {upload_date} {extractor}\n"
-                f"{source}\n"
+                f"# {upload_date} {source}\n"
                 f"{title}\n"
                 f"{text}"
             )
-            v.pushed = 1
 
         except Exception:
             continue
@@ -125,6 +123,8 @@ def pusher(session, limit: int) -> None:
         #pushto_Server3(body)
         pushto_ntfy(body)
         #pushto_localfile(body)
+        for v in todo:
+            v.pushed = 1
         update_entries(session, todo)
         print(f"Finished Sending")
     except Exception:

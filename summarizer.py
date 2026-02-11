@@ -1,4 +1,3 @@
-# summarizer.py
 from datetime import datetime
 import requests
 import tiktoken
@@ -62,7 +61,6 @@ def request_gpt(input, system_content, model):
     except KeyError:
         encoding = tiktoken.get_encoding("cl100k_base")
 
-    # 请求体
     payload = {
         "model": model_info[model]["model"],
         "messages": [
@@ -76,13 +74,11 @@ def request_gpt(input, system_content, model):
         "max_tokens": model_info[model]["max_output"],
     }
 
-    # 请求头
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
 
-    # 发送请求
     try:
         response = requests.post(
             api_info["url_redirect"], 
@@ -94,7 +90,7 @@ def request_gpt(input, system_content, model):
         print(f"An error occurred:", str(e))
         print(f"Text token: {len(encoding.encode(input))}")
 
-    # 输出信息
+    # print
     response_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     response_json = response.json()
     if response_json.get("error") is not None:
@@ -111,13 +107,13 @@ def request_gpt(input, system_content, model):
 def summarizer_request_gpt(input, which_system, model):
     '''
     Args:
-        input (str): 发送的user内容
-        which_system (str): 请求提示词
-        model (str): 使用的模型
+        input (str)
+        which_system (str): prompt
+        model (str)
 
     Returns:
-        response_txt (str):
-        history (list):
+        response_txt (str)
+        history (list)
     '''
     if not model:
         raise ValueError("model is required")

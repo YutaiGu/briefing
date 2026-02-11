@@ -64,14 +64,14 @@ def Clean_Files(filename, temporary_dir):
 
 def Split_Video_File(video_file, temporary_dir, split_duration=1800):
     """
-    根据给定的切割时长将视频文件切割成多个片段
+    Split a video file into multiple segments based on the specified duration.
 
     Args:
-        filename (str): 需要被切割的视频文件名。
-        split_duration (int, optional): 每个切割视频片段的时长（以秒为单位）。默认值为180秒。
+        filename (str): The name of the video file to be split.
+        split_duration (int, optional): The duration of each split video segment (in seconds). Default is 180 seconds.
 
     Returns:
-        filelist (list): 一个包含所有切割视频片段文件路径的列表。
+        filelist (list): A list containing the file paths of all split video segments.
             ['E:\\Pycharm_Projects\\TryWhisper\\temporary/video_cut/TestVideo_0.mp4', ...]
     """
     filename = os.path.basename(video_file).split('.')[0]
@@ -79,19 +79,19 @@ def Split_Video_File(video_file, temporary_dir, split_duration=1800):
 
     video = AudioFileClip(video_file)
 
-    # 计算文件总时长和切割点。
+    # Calculate the total duration of the file and determine the cut points
     total_duration = video.duration
     split_points = list(range(0, int(total_duration), split_duration))
     split_points.append(int(total_duration))
     filelist = []
 
-    # 切割视频文件
+    # Split video files
     for i in range(len(split_points) - 1):
         start_time = split_points[i]
         end_time = split_points[i + 1]
         split_video = video.subclipped(start_time, end_time)
         output_filename = f"{temporary_dir}/{filename}_cut/V_{i}.mp3"
-        split_video.write_audiofile(  # 不打印帧进度, 只在真正错误时输出
+        split_video.write_audiofile(  # output only when a error occurs
             output_filename,
             logger=None,
             ffmpeg_params=["-nostats", "-loglevel", "error"],
@@ -135,7 +135,7 @@ def Video_Processing(payload):
     start_time = start_time.strftime("%Y-%m-%d %H:%M:%S")
     cut_line = "\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
 
-    # 初始化，创建必要文件
+    # create necessary files
     temporary_dir = (DATA_DIR / "temporary" / filename).as_posix()
     Path(temporary_dir).mkdir(parents=True, exist_ok=True)
 
@@ -145,28 +145,27 @@ def Video_Processing(payload):
     whisper_path = (output_dir / "whisper.txt").as_posix()
     history_path = (output_dir / "history.txt").as_posix()
 
-    # 清空txt文档内容
+    # Clear the contents
     with open(whisper_path, "w", encoding="utf-8") as whisper_file:
         whisper_file.write(f"{filename} at {start_time}:{cut_line}")
 
     with open(history_path, "w", encoding="utf-8") as history_file:
         history_file.write(f"{filename} at {start_time}:{cut_line}")
 
-    # 切割Video
+    # Split
     filelist = Split_Video_File(video_file, temporary_dir)
     print(f"[SPLIT DONE] {filename}")
 
-    # 写入txt
-    # progress_bar = tqdm(total=len(filelist), desc="Processing Video") # 进度条
+    # Write
     for fp in filelist:
-        result = Whisper_Audio(fp, language=language)  # 获取音频识别的结果
+        result = Whisper_Audio(fp, language=language)
         # progress_bar.update(1)
 
         with open(whisper_path, "a", encoding="utf-8") as whisper_file:
             whisper_file.write(result + "\n")
     print(f"[WHISPER DONE] {filename}")
 
-    Clean_Files(filename, temporary_dir)  # 清除视频文件
+    Clean_Files(filename, temporary_dir)
     print(f"[CLEAN DONE] {filename}")
 
     return payload
