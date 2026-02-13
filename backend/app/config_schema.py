@@ -7,44 +7,120 @@ from typing import Any, Dict, List
 
 SCHEMA: List[Dict[str, Any]] = [
     {
-        "name": "READ_LANGUAGE",
+        "name": "Reading Language",
+        "key": "READ_LANGUAGE",
         "type": "select",
         "default": "chinese",
         "choices": ["chinese", "english"],
+        "desc": "Your reading language",
+        "cn": "你的阅读语言",
     },
-    {"name": "UPDATE_LIMIT", "type": "int", "default": 3, "min": 1, "max": 20},
-    {"name": "POOL_NUM", "type": "int", "default": 2, "min": 1, "max": 16},
-    {"name": "TRANSCRIBER_LIMIT", "type": "int_optional", "default": None, "min": 1, "max": 20},
-    {"name": "SUMMARIZER_LIMIT", "type": "int_optional", "default": None, "min": 1, "max": 20},
-    {"name": "PUSHER_LIMIT", "type": "int", "default": 5, "min": 1, "max": 20},
-    {"name": "DOWNLOAD_INTERVAL", "type": "int", "default": 6 * 60 * 60, "min": 0, "max": 24 * 60 * 60},
-    {"name": "PROCESS_INTERVAL", "type": "int", "default": 10 * 60, "min": 0, "max": 24 * 60 * 60},
-    {"name": "PUSHER_INTERVAL", "type": "int", "default": 10 * 60, "min": 0, "max": 24 * 60 * 60},
-    {"name": "ENTRIES_LIMIT", "type": "int", "default": 3, "min": 1, "max": 20},
-    {"name": "SOURCE_URLS", "type": "list_str", "default": []},
     {
-        "name": "whisper_model",
+        "name": "Update Limit", 
+        "key": "UPDATE_LIMIT", 
+        "type": "int", "default": 3, "min": 1, "max": 20, 
+        "desc": "Max process number per source", 
+        "cn": "每源最大处理条数"
+    },
+    {
+        "name": "Pool Num", 
+        "key": "POOL_NUM", 
+        "type": "int", "default": 2, "min": 1, "max": 16, 
+        "desc": "Worker processes", 
+        "cn": "工作进程数"
+    },
+    {
+        "name": "Transcribe Limit", 
+        "key": "TRANSCRIBER_LIMIT", 
+        "type": "int_optional", 
+        "default": None, "min": 1, "max": 20, 
+        "desc": "Max transcribe number per run", 
+        "cn": "最大转写条数/次"
+    },
+    {
+        "name": "Summarize Limit", 
+        "key": "SUMMARIZER_LIMIT", 
+        "type": "int_optional", "default": None, "min": 1, "max": 20, 
+        "desc": "Max summarize number per run", 
+        "cn": "最大总结条数/次"
+    },
+    {
+        "name": "Push Limit", 
+        "key": "PUSHER_LIMIT", 
+        "type": "int", "default": 5, "min": 1, "max": 20, 
+        "desc": "Push jobs per run", 
+        "cn": "最大推送条数/次"
+    },
+    {
+        "name": "Download Interval", 
+        "key": "DOWNLOAD_INTERVAL", 
+        "type": "int", "default": 6 * 60 * 60, "min": 0, "max": 24 * 60 * 60, 
+        "desc": "Seconds between downloads", 
+        "cn": "下载间隔 秒"
+    },
+    {
+        "name": "Process Interval", 
+        "key": "PROCESS_INTERVAL", 
+        "type": "int", "default": 10 * 60, "min": 0, "max": 24 * 60 * 60, 
+        "desc": "Seconds between processes", 
+        "cn": "处理间隔 秒"
+    },
+    {
+        "name": "Push Interval", 
+        "key": "PUSHER_INTERVAL", 
+        "type": "int", "default": 10 * 60, "min": 0, "max": 24 * 60 * 60, 
+        "desc": "Seconds between pushes", 
+        "cn": "推送间隔 秒"
+    },
+    {
+        "name": "Entries Limit", 
+        "key": "ENTRIES_LIMIT", 
+        "type": "int", "default": 3, "min": 1, "max": 20, 
+        "desc": "Newest entries to fetch", 
+        "cn": "每源最大下载条数"
+    },
+    {
+        "name": "Source Urls", 
+        "key": "SOURCE_URLS", 
+        "type": "list_str", "default": [], 
+        "desc": "Channels", 
+        "cn": "主页链接"
+    },
+    {
+        "name": "Whisper Model",
+        "key": "whisper_model",
         "type": "select",
         "default": "medium",
         "choices": ["tiny", "small", "medium", "large"],
+        "desc": "Speech recognition model",
+        "cn": "语音识别模型",
     },
     {
-        "name": "summarize_model",
+        "name": "Summarize Model",
+        "key": "summarize_model",
         "type": "select",
         "default": "gpt-4.1-nano",
         "choices": ["gpt-4.1-nano"],
+        "desc": "Summarize model (Unique)",
+        "cn": "总结模型 (唯一)",
     },
     {
-        "name": "translate_model",
+        "name": "Translate Model",
+        "key": "translate_model",
         "type": "select",
         "default": "gpt-4o-mini",
         "choices": ["gpt-4o-mini", "gpt-4o"],
+        "desc": "Translate Model",
+        "cn": "翻译模型",
     },
     {
         "name": "COMPRESS_LEVEl",
+        "key": "COMPRESS_LEVEl",
         "type": "select",
         "default": "100",
         "choices": ["100", "75", "50", "25"],
+        "desc": "Summary Text Volume Reduction % (Recommended: 100%)",
+        "cn": "总结文本量压缩% (推荐100%)",
     },
 ]
 
@@ -60,7 +136,8 @@ def _set_path(target: Dict[str, Any], path: str, value: Any) -> None:
 def make_default_config() -> Dict[str, Any]:
     cfg: Dict[str, Any] = {}
     for f in SCHEMA:
-        _set_path(cfg, f["name"], _coerce(f, f.get("default")))
+        path = f.get("key") or f["name"]
+        _set_path(cfg, path, _coerce(f, f.get("default")))
     return cfg
 
 
@@ -117,7 +194,7 @@ def validate_and_merge(data: Dict[str, Any]) -> Dict[str, Any]:
     # Merge incoming data with defaults, coerce types according to SCHEMA.
     result = make_default_config()
     for f in SCHEMA:
-        name = f["name"]
+        name = f.get("key") or f["name"]
         parts = name.split(".")
         incoming = data
         for p in parts:

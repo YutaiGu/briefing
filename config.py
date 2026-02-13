@@ -20,7 +20,10 @@ DB_URL = f"sqlite:///{(DATA_DIR / 'db.sqlite3').as_posix()}"  # SQLite
 if not CONFIG_JSON.exists():
     raise FileNotFoundError(f"Missing configuration. Please save the configuration once in the panel first.")
 
-_cfg = json.loads(CONFIG_JSON.read_text(encoding="utf-8"))
+try:
+    _cfg = json.loads(CONFIG_JSON.read_text(encoding="utf-8"))
+except Exception as e:
+    raise RuntimeError(f"Failed to read config.json: {CONFIG_JSON}") from e
 
 READ_LANGUAGE = _cfg["READ_LANGUAGE"]
 UPDATE_LIMIT = int(_cfg["UPDATE_LIMIT"])
@@ -53,14 +56,15 @@ _secrets = load_config(CONFIG_FILE)
 
 SERVER3_KEY = _secrets.get("SERVER3_KEY", None)
 NTFY_SERVER = _secrets.get("NTFY_SERVER", None)
-REPORT_DIR = _secrets.get("REPORT_DIR", None)
-REPORT_DIR = Path(REPORT_DIR) if REPORT_DIR else None
 
 # configuration
-api_info = {
-    "api_key": _secrets.get("API_KEY", None),
-    "url_redirect": _secrets.get("API_URL", None),
-}
+try:
+    api_info = {
+        "api_key": _secrets["API_KEY"],
+        "url_redirect": _secrets["API_URL"],
+    }
+except KeyError as e:
+    raise RuntimeError(f"Failed to read API_KEY or API_URL: {e}")
 
 api_model = {
     "whisper_model": _cfg["whisper_model"],
@@ -118,5 +122,15 @@ model_para = {
     "presence_penalty": -0.2,
 }
 
+
 def check_config() -> tuple[bool, list[str], list[str]]:
+    for d in [
+        DATA_DIR,
+        AUDIO_DIR,
+        PROMPT_DIR,
+        OUTPUT_DIR,
+        TEMPORARY_DIR,
+        REPORT_DIR,
+    ]:
+        d.mkdir(parents=True, exist_ok=True)
     return True, [], []

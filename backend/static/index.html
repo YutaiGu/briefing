@@ -18,6 +18,27 @@
     .muted { color: #6b7280; }
     .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .logbox { background: #111; color: #0f0; padding: 12px; border-radius: 8px; max-height: 340px; overflow-y: auto; white-space: pre-wrap; font-family: "Cascadia Code", Consolas, monospace; }
+    .tip { position: relative; display: inline-block; border-bottom: 1px dotted #9ca3af; }
+    .tip::after {
+      content: attr(data-tip);
+      position: absolute;
+      left: 0;
+      top: 110%;
+      background: #111;
+      color: #fff;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: pre-line;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(2px);
+      transition: opacity 0.05s ease, transform 0.05s ease;
+      z-index: 10;
+      max-width: 280px;
+    }
+    .tip:hover::after { opacity: 1; transform: translateY(0); }
+    .cn { font-size: 12px; color: #4b5563; line-height: 1.2; }
   </style>
 </head>
 <body>
@@ -39,7 +60,7 @@
       <summary style="cursor:pointer;font-weight:600;">Channels</summary>
       <div style="margin-top:12px;">
         <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;">
-          SOURCE_URLS (One line per item)
+          <span id="channels-label" class="tip" data-tip="">Source Urls</span>
           <textarea id="channels-input" style="min-height:140px;padding:8px;border:1px solid #cfd5e0;border-radius:6px;font-family:monospace;"></textarea>
         </label>
         <button id="save-channels-btn" style="margin-top:12px;">Save Channels</button>
@@ -71,6 +92,7 @@
     const channelsInput = document.getElementById("channels-input");
     const saveChannelsBtn = document.getElementById("save-channels-btn");
     const channelsStatus = document.getElementById("channels-status");
+    const channelsLabel = document.getElementById("channels-label");
     const statusText = document.getElementById("status-text");
     const runBtn = document.getElementById("run-btn");
     const stopBtn = document.getElementById("stop-btn");
@@ -80,6 +102,7 @@
       const res = await fetch("/api/schema");
       const data = await res.json();
       schema = data.fields || [];
+      updateChannelsLabel();
     }
 
     async function fetchConfig() {
@@ -91,8 +114,9 @@
     function renderConfig() {
       cfgGrid.innerHTML = "";
       schema.forEach(f => {
-        if (f.name === "SOURCE_URLS") return; // channels handled separately
-        const value = getValueByPath(config, f.name);
+        const pathKey = f.key || f.name;
+        if (pathKey === "SOURCE_URLS") return; // channels handled separately
+        const value = getValueByPath(config, pathKey);
         cfgGrid.appendChild(fieldFromSchema(f, value));
       });
     }
@@ -102,10 +126,22 @@
       channelsInput.value = list.join("\n");
     }
 
+    function updateChannelsLabel() {
+      if (!channelsLabel) return;
+      const f = schema.find(x => (x.key || x.name) === "SOURCE_URLS");
+      if (!f) return;
+      channelsLabel.textContent = f.name;
+      channelsLabel.dataset.tip = [f.desc || "", f.cn || ""].filter(Boolean).join("\n");
+    }
+
     function fieldFromSchema(f, value) {
       const displayValue = deriveDisplayValue(f, value);
       const label = document.createElement("label");
-      label.textContent = f.name;
+      const span = document.createElement("span");
+      span.className = "tip";
+      span.dataset.tip = [f.desc || "", f.cn || ""].filter(Boolean).join("\n");
+      span.textContent = f.name;
+      label.appendChild(span);
       let el;
       if (f.type === "select") {
         el = document.createElement("select");
@@ -129,7 +165,8 @@
         el.type = "text";
         el.value = displayValue ?? "";
       }
-      el.onchange = (e) => updateField(f.name, e.target.value);
+      const pathKey = f.key || f.name;
+      el.onchange = (e) => updateField(pathKey, e.target.value);
       label.appendChild(el);
       return label;
     }
