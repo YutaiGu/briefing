@@ -21,6 +21,7 @@ Currently supported platforms:
 
 * **YouTube**
 * **BiliBili**
+* **TikTok**
 
 ---
 

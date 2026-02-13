@@ -15,6 +15,7 @@
 当前已支持以下平台：
 - **YouTube**
 - **BiliBili**
+* **TikTok**
 
 ---
 
