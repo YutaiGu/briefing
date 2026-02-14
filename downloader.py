@@ -70,6 +70,7 @@ def fetch_all_entries(source_url: str) -> list:
         ydl_opts = {
             "skip_download": True,
             "quiet": True,
+            "noprogress": True,
             "no_warnings": True,
             "playlist_items": ENTRIES_LIMIT,
             "extract_flat": True,
@@ -147,6 +148,7 @@ def download_entry(entry: Video) -> bool:
 
     ydl_opts = {
         "quiet": True,
+        "noprogress": True,
         "no_warnings": True,
         "format": "bestaudio/best",
         "noplaylist": True,

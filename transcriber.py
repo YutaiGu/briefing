@@ -4,6 +4,9 @@ from datetime import datetime
 import torch
 import whisper
 import shutil
+import contextlib
+import threading
+import time
 from moviepy import AudioFileClip
 from multiprocessing import Pool, cpu_count
 
@@ -108,12 +111,24 @@ def Whisper_Audio(video_file, language=None):
     load_whisper_model()
     use_fp16 = torch.cuda.is_available()
 
-    result = _MODEL.transcribe(
-        video_file,
-        verbose=False,
-        language=language,
-        fp16=use_fp16,
-    )
+    def heartbeat():
+        while True:
+            print(".", end="", flush=True)
+            time.sleep(15)
+
+    threading.Thread(target=heartbeat, daemon=True).start()
+
+    try:
+        with open(os.devnull, "w") as devnull, contextlib.redirect_stderr(devnull):
+            result = _MODEL.transcribe(
+                video_file,
+                verbose=False,
+                language=language,
+                fp16=use_fp16,
+            )
+    except Exception as e:
+        raise RuntimeError(f"Whisper failed on {video_file}: {e}") from e
+    
     return result["text"]
 
 
@@ -154,7 +169,7 @@ def Video_Processing(payload):
 
     # Split
     filelist = Split_Video_File(video_file, temporary_dir)
-    print(f"[SPLIT DONE] {filename}")
+    print(f"[WHISPER] {filename} ")
 
     # Write
     for fp in filelist:
