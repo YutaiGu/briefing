@@ -23,6 +23,10 @@ Currently supported platforms:
 * **BiliBili**
 * **TikTok**
 
+This project is compatible with external downloaders.
+
+If audio files are placed into the `briefing/data/audio` directory, the system will automatically detect and process them.
+
 ---
 
 ## 2. Feature Preview
@@ -128,3 +132,9 @@ Please feel free to submit issues on GitHub for:
 - Feature requests
 
 All constructive input is appreciated.
+
+---
+
+This project is not affiliated with, endorsed by, or associated with any third-party downloader.
+
+Users are responsible for complying with the terms of service of the respective platforms.
