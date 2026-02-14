@@ -96,6 +96,10 @@ This file should not be committed to the repository.
 
 ![3](images/3.png)
 
+- **YouTube**: https://www.youtube.com/@example/videos
+- **BiliBili**: https://space.bilibili.com/example/upload/video
+- **TikTok**: https://www.tiktok.com/@example
+
 ---
 
 ### 3.6 Firefox Cookie Support (Recommend)

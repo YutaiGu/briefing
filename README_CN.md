@@ -15,7 +15,7 @@
 当前已支持以下平台：
 - **YouTube**
 - **BiliBili**
-* **TikTok**
+- **TikTok**
 
 ---
 
@@ -65,6 +65,10 @@ OpenAI官方文档
 ### 3.5 主页链接填写方式
 
 ![3](images/3.png)
+
+- **YouTube**: https://www.youtube.com/@example/videos
+- **BiliBili**: https://space.bilibili.com/example/upload/video
+- **TikTok**: https://www.tiktok.com/@example
 
 ---
 
