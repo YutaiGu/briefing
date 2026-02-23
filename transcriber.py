@@ -92,17 +92,20 @@ def Split_Video_File(video_file, temporary_dir, split_duration=1800):
     for i in range(len(split_points) - 1):
         start_time = split_points[i]
         end_time = split_points[i + 1]
-        split_video = video.subclipped(start_time, end_time)
-        output_filename = f"{temporary_dir}/{filename}_cut/V_{i}.mp3"
-        split_video.write_audiofile(  # output only when a error occurs
-            output_filename,
-            logger=None,
-            ffmpeg_params=["-nostats", "-loglevel", "error"],
-        )
-        # output_filename = f"{temporary_dir}/{filename}_cut/V_{i}.mp4"
-        # split_video.write_videofile(output_filename)
-        filelist.append(output_filename)
-
+        try:
+            split_video = video.subclipped(start_time, end_time)
+            output_filename = f"{temporary_dir}/{filename}_cut/V_{i}.mp3"
+            split_video.write_audiofile(  # output only when a error occurs
+                output_filename,
+                logger=None,
+                ffmpeg_params=["-nostats", "-loglevel", "error"],
+            )
+            # output_filename = f"{temporary_dir}/{filename}_cut/V_{i}.mp4"
+            # split_video.write_videofile(output_filename)
+            filelist.append(output_filename)
+        finally:
+            split_video.close()
+            
     video.close()
     return filelist
 

@@ -52,6 +52,15 @@ SCHEMA: List[Dict[str, Any]] = [
         "cn": "最大推送条数/次"
     },
     {
+        "name": "Push To",
+        "key": "PUSH_TO",
+        "type": "select",
+        "default": "ntfy",
+        "choices": ["ntfy", "Server3", "LocalFile"],
+        "desc": "Push to where",
+        "cn": "推送到哪里",
+    },
+    {
         "name": "Download Interval", 
         "key": "DOWNLOAD_INTERVAL", 
         "type": "int", "default": 6 * 60 * 60, "min": 0, "max": 24 * 60 * 60, 

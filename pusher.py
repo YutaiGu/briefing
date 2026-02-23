@@ -2,20 +2,27 @@ from serverchan_sdk import sc_send
 import requests
 from datetime import datetime
 
-from config import api_model, READ_LANGUAGE, OUTPUT_DIR, SERVER3_KEY, NTFY_SERVER, DATA_DIR, COMPRESS_LEVEl, REPORT_DIR
+from config import api_model, READ_LANGUAGE, OUTPUT_DIR, SERVER3_KEY, NTFY_SERVER, COMPRESS_LEVEl, REPORT_DIR, PUSH_TO
 from db import get_unpushed, update_entries
 from summarizer import request_gpt
 
-def pushto_Server3(message: str) -> None:
+def pushto_Server3(message: str) -> bool:
+    if not SERVER3_KEY:
+        return False
     options = {"tags": "Briefing Summary"}
-    response = sc_send(SERVER3_KEY, "Briefing Summary", message, options)
-
-    if response["code"] != 0:
-        print(f"Push Error: {response}")
+    try:
+        response = sc_send(SERVER3_KEY, "Briefing Summary", message, options)
+        if response.get("code") != 0:
+            print(f"Push Error: {response}")
+            return False
+        return True
+    except Exception as e:
+        print(f"Push Error (Server3): {e}")
+        return False
 
 def pushto_ntfy(message: str) -> bool:
     if NTFY_SERVER is None:
-        return 
+        return False
 
     url = f"https://ntfy.sh/{NTFY_SERVER}"
     headers = {
@@ -40,26 +47,30 @@ def pushto_localfile(message: str) -> None:
         log_file = REPORT_DIR / f"{now}.txt"
         with log_file.open("w", encoding="utf-8") as f:
             f.write(f"{message}\n")
+        return True
     except Exception:
-        pass
+        return False
 
 def translate_and_compress(input: str, language: str):
     if language not in ("en", "en-us", "english", "English") and COMPRESS_LEVEl != 100:  # translate + compress
         response_json = request_gpt(
             input,
-            f"Translate the user input into {language}. Translate the user input into {language}. Compress the content to approximately {COMPRESS_LEVEl}% of the original length. Preserve the core thesis, key financial facts, and the overall reasoning structure. Merge related arguments that support the same conclusion. Eliminate repeated arguments, illustrative restatements, and secondary justifications. Maintain logical coherence and emphasis, but do not preserve one-to-one paragraph mapping. Output only the translation.",
+            f"Translate the user input into {language}. Translate the user input into {language}. Compress the content to approximately {COMPRESS_LEVEl}% of the original length. Preserve the core thesis, key financial facts, and the overall reasoning structure. Merge related arguments that support the same conclusion. Eliminate repeated arguments, illustrative restatements, and secondary justifications. Maintain logical coherence and emphasis, but do not preserve one-to-one paragraph mapping. Output only the translation. "
+            f"Format the output in Markdown to improve readability. Bold key terms where appropriate.",
             api_model["translate_model"],
         )
     elif language not in ("en", "en-us", "english", "English") and COMPRESS_LEVEl == 100:  # translate
         response_json = request_gpt(
             input,
-            f"You are a translation engine. Your task is to translate the user input into {language}. Output only the translation. Do not add any commentary, prefixes, suffixes, or explanations. Preserve the original formatting exactly.",
+            f"You are a translation engine. Your task is to translate the user input into {language}. Output only the translation. Do not add any commentary, prefixes, suffixes, or explanations. Preserve the original formatting exactly. "
+            f"Format the output in Markdown to improve readability. Bold key terms where appropriate.",
             api_model["translate_model"],
         )
     elif COMPRESS_LEVEl != 100:  # compress
         response_json = request_gpt(
             input,
-            f"Compress the content to approximately {COMPRESS_LEVEl}% of the original length. Preserve the core thesis, key financial facts, and the overall reasoning structure. Merge related arguments that support the same conclusion. Eliminate repeated arguments, illustrative restatements, and secondary justifications. Maintain logical coherence and emphasis, but do not preserve one-to-one paragraph mapping. Output only the translation.",
+            f"Compress the content to approximately {COMPRESS_LEVEl}% of the original length. Preserve the core thesis, key financial facts, and the overall reasoning structure. Merge related arguments that support the same conclusion. Eliminate repeated arguments, illustrative restatements, and secondary justifications. Maintain logical coherence and emphasis, but do not preserve one-to-one paragraph mapping. Output only the translation. "
+            f"Format the output in Markdown to improve readability. Bold key terms where appropriate.",
             api_model["translate_model"],
         )
     else:  # origin
@@ -112,6 +123,10 @@ def pusher(session, limit: int) -> None:
                 f"{text}"
             )
 
+            report_path = OUTPUT_DIR / str(v.video_id) / "report.txt"
+            with report_path.open("w", encoding="utf-8") as f:
+                f.write(f"{text}\n")
+
         except Exception:
             continue
     
@@ -121,12 +136,19 @@ def pusher(session, limit: int) -> None:
     body = "\n\n".join(parts)
 
     try:
-        #pushto_Server3(body)
-        if pushto_ntfy(body):
+        target = (PUSH_TO or "ntfy").strip()
+        if target == "Server3":
+            ok = pushto_Server3(body)
+        elif target == "LocalFile":
+            ok = pushto_localfile(body)
+        else:
+            ok = pushto_ntfy(body)
+
+        if ok:
             for v in todo:
                 v.pushed = 1
             update_entries(session, todo)
-        else:
+        elif target != "LocalFile":
             pushto_localfile(body)
         print(f"Finished Sending")
     except Exception:

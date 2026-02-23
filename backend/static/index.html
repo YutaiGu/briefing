@@ -7,7 +7,7 @@
   <style>
     :root { font-family: "Segoe UI", system-ui, sans-serif; }
     body { margin: 0; background: #f6f7fb; color: #1c1f23; }
-    .shell { max-width: 1100px; margin: 32px auto; padding: 0 20px; display: grid; gap: 20px; }
+    .shell { max-width: 1400px; margin: 32px auto; padding: 0 20px; display: grid; gap: 20px; }
     h2 { margin: 0 0 8px; }
     section { background: #fff; border: 1px solid #e2e5ec; border-radius: 10px; padding: 16px 18px; box-shadow: 0 4px 14px rgba(0,0,0,0.04); }
     .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
@@ -18,6 +18,33 @@
     .muted { color: #6b7280; }
     .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .logbox { background: #111; color: #0f0; padding: 12px; border-radius: 8px; max-height: 340px; overflow-y: auto; white-space: pre-wrap; font-family: "Cascadia Code", Consolas, monospace; }
+    .reportbox { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 14px; padding: 4px; }
+    .report-group { background: #ffffff; border: 1px solid #dbe4f0; border-radius: 12px; padding: 12px; box-shadow: 0 4px 14px rgba(15,23,42,0.06); }
+    .report-group-head { font-size: 13px; color: #1f2937; margin-bottom: 10px; padding: 8px 10px; border-left: 4px solid #0ea5e9; background: #f0f9ff; border-radius: 8px; font-weight: 700; }
+    .report-group-items { display: grid; gap: 8px; }
+    .report-local-items { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+    .report-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; }
+    .report-title { font-weight: 600; color: #0f172a; }
+    .report-meta { font-size: 12px; color: #64748b; }
+    .report-open { border: 1px solid #bfdbfe; background: #eff6ff; color: #1e3a8a; padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+    .report-wrap { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; }
+    .status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+    .dot-green { background: #22c55e; }
+    .dot-gray { background: #64748b; }
+    .spinner { width: 10px; height: 10px; border: 2px solid #f59e0b; border-top-color: transparent; border-radius: 50%; display: inline-block; animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .modal { position: fixed; inset: 0; background: rgba(2,6,23,0.72); display: none; align-items: center; justify-content: center; padding: 24px; z-index: 50; }
+    .modal.show { display: flex; }
+    .modal-card { width: min(960px, 96vw); max-height: 85vh; background: #fff; border-radius: 10px; border: 1px solid #e2e8f0; display: grid; grid-template-rows: auto 1fr; }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid #e5e7eb; }
+    .modal-body { overflow-y: auto; padding: 14px; }
+    .md { line-height: 1.65; color: #0f172a; }
+    .md p { margin: 0 0 10px; }
+    .md h1, .md h2, .md h3 { margin: 12px 0 8px; line-height: 1.35; }
+    .md ul { margin: 8px 0 10px 20px; }
+    .md code { background: #f1f5f9; padding: 1px 4px; border-radius: 4px; }
+    .md pre { background: #0f172a; color: #e2e8f0; padding: 10px; border-radius: 8px; overflow-x: auto; }
     .tip { position: relative; display: inline-block; border-bottom: 1px dotted #9ca3af; }
     .tip::after {
       content: attr(data-tip);
@@ -68,17 +95,39 @@
       </div>
     </details>
 
-    <section class="row">
-      <h3 style="margin:0;">Control Panel</h3>
-      <button id="run-btn">Run</button>
-      <button id="stop-btn">Stop</button>
-      <span id="status-text" class="muted">Status: -</span>
+    <section>
+      <div class="row">
+        <h3 style="margin:0;">Control Panel</h3>
+        <button id="run-btn">Run</button>
+        <button id="stop-btn">Stop</button>
+        <span id="status-text" class="muted">Status: -</span>
+      </div>
+      <details id="logs-accordion" style="margin-top:10px;">
+        <summary style="cursor:pointer;font-weight:600;">Log Viewer</summary>
+        <div style="margin-top:10px;">
+          <div id="logbox" class="logbox"></div>
+        </div>
+      </details>
     </section>
 
     <section>
-      <h3>Log Viewer</h3>
-      <div id="logbox" class="logbox"></div>
+      <div class="report-wrap">
+        <div id="reportbox" class="reportbox"></div>
+      </div>
     </section>
+
+  </div>
+
+  <div id="report-modal" class="modal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <strong id="report-modal-title">Report</strong>
+        <button id="report-modal-close" class="report-open">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="report-modal-body" class="md"></div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -97,6 +146,13 @@
     const runBtn = document.getElementById("run-btn");
     const stopBtn = document.getElementById("stop-btn");
     const logbox = document.getElementById("logbox");
+    const reportbox = document.getElementById("reportbox");
+    const reportModal = document.getElementById("report-modal");
+    const reportModalTitle = document.getElementById("report-modal-title");
+    const reportModalBody = document.getElementById("report-modal-body");
+    const reportModalClose = document.getElementById("report-modal-close");
+    let reportTitleMap = {};
+    let isRunning = false;
 
     async function fetchSchema() {
       const res = await fetch("/api/schema");
@@ -253,6 +309,7 @@
     async function fetchStatus() {
       const res = await fetch("/api/status");
       const data = await res.json();
+      isRunning = !!data.running;
       statusText.textContent = data.running ? `Status: running (pid ${data.pid})` : "Status: stopped";
       runBtn.disabled = data.running;
       stopBtn.disabled = !data.running;
@@ -266,6 +323,161 @@
       logbox.scrollTop = logbox.scrollHeight;
     }
 
+    function escapeHtml(s) {
+      return (s || "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+    }
+
+    function renderMarkdown(src) {
+      let s = escapeHtml(src || "").replace(/\r\n/g, "\n");
+
+      // fenced code blocks
+      s = s.replace(/```([\s\S]*?)```/g, (_, code) => `<pre><code>${code}</code></pre>`);
+
+      // headers
+      s = s.replace(/^### (.+)$/gm, "<h3>$1</h3>");
+      s = s.replace(/^## (.+)$/gm, "<h2>$1</h2>");
+      s = s.replace(/^# (.+)$/gm, "<h1>$1</h1>");
+
+      // unordered lists
+      s = s.replace(/(?:^|\n)- (.+)(?=\n|$)/g, "\n<li>$1</li>");
+      s = s.replace(/(<li>[\s\S]*?<\/li>)/g, "<ul>$1</ul>");
+      s = s.replace(/<\/ul>\s*<ul>/g, "");
+
+      // inline formats
+      s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+
+      // paragraphs + line breaks
+      const blocks = s.split(/\n{2,}/).map(b => b.trim()).filter(Boolean).map(b => {
+        if (/^<(h1|h2|h3|ul|pre)/.test(b)) return b;
+        return `<p>${b.replace(/\n/g, "<br>")}</p>`;
+      });
+      return blocks.join("\n");
+    }
+
+    function cleanSource(s) {
+      return (s || "")
+        .replace(/^https?:\/\/www\./i, "")
+        .replace(/^https?:\/\//i, "")
+        .replace(/\/+$/g, "")
+        .trim();
+    }
+
+    function cleanTitle(s) {
+      return (s || "")
+        .replace(/#[^\s#]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function formatDownloadedAt(downloadedAt) {
+      const raw = (downloadedAt || "").trim();
+      if (!raw) return "";
+      if (/^\d{8}$/.test(raw)) {
+        return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)} 00-00-00`;
+      }
+      if (/^\d{14}$/.test(raw)) {
+        return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)} ${raw.slice(8, 10)}-${raw.slice(10, 12)}-${raw.slice(12, 14)}`;
+      }
+      const norm = raw.replace("T", " ");
+      const parts = norm.split(" ");
+      const datePart = parts[0] || "";
+      const timePart = (parts[1] || "00:00:00").split(".")[0];
+      const hhmmss = timePart.replaceAll(":", "-");
+      return `${datePart} ${hhmmss}`;
+    }
+
+    function statusHtml(item) {
+      if (item.pushed === 1) return `<span class="status"><span class="dot dot-green"></span>done</span>`;
+      if (isRunning) return `<span class="status"><span class="spinner"></span>running</span>`;
+      return `<span class="status"><span class="dot dot-gray"></span>queued</span>`;
+    }
+
+    function renderReports(items) {
+      if (!Array.isArray(items) || items.length === 0) {
+        reportbox.innerHTML = `<div class="report-meta">No downloaded entries yet.</div>`;
+        return;
+      }
+      reportTitleMap = {};
+      const groups = new Map();
+      const localItems = [];
+      const renderItem = (item) => {
+        const clean = cleanTitle(item.title || item.video_id || "(no title)");
+        const title = escapeHtml(clean);
+        const date = escapeHtml(formatDownloadedAt(item.downloaded_at));
+        const canOpen = !!item.report_exists;
+        if (item.video_id) reportTitleMap[item.video_id] = clean;
+        return `
+          <div class="report-item">
+            <div>
+              <div class="report-title">${title}</div>
+              <div class="report-meta">${date}</div>
+              ${statusHtml(item)}
+            </div>
+            <button class="report-open" data-video-id="${escapeHtml(item.video_id || "")}" ${canOpen ? "" : "disabled"}>${canOpen ? "View MD" : "No report"}</button>
+          </div>
+        `;
+      };
+
+      items.forEach(item => {
+        const key = cleanSource(item.source || "unknown") || "unknown";
+        if (key.toLowerCase() === "local") {
+          localItems.push(item);
+          return;
+        }
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(item);
+      });
+
+      const groupedHtml = Array.from(groups.entries()).map(([sourceKey, rows]) => {
+        const entriesHtml = rows.map(renderItem).join("");
+        return `
+          <div class="report-group">
+            <div class="report-group-head">${escapeHtml(cleanSource(sourceKey))}</div>
+            <div class="report-group-items">${entriesHtml}</div>
+          </div>
+        `;
+      }).join("");
+
+      const localHtml = localItems.length
+        ? `
+          <div class="report-group">
+            <div class="report-group-head">local</div>
+            <div class="report-local-items">${localItems.map(renderItem).join("")}</div>
+          </div>
+        `
+        : "";
+
+      reportbox.innerHTML = groupedHtml + localHtml;
+    }
+
+    async function fetchReports() {
+      try {
+        const res = await fetch("/api/reports?limit=300");
+        const data = await res.json();
+        renderReports(data.items || []);
+      } catch (_) {
+        reportbox.innerHTML = `<div class="report-meta">Report list load failed.</div>`;
+      }
+    }
+
+    async function openReport(videoId) {
+      if (!videoId) return;
+      const title = reportTitleMap[videoId] || videoId;
+      try {
+        const res = await fetch(`/api/report/${encodeURIComponent(videoId)}`);
+        if (!res.ok) throw new Error("not found");
+        const data = await res.json();
+        reportModalTitle.textContent = title;
+        reportModalBody.innerHTML = renderMarkdown(data.content || "");
+        reportModal.classList.add("show");
+      } catch (_) {
+        reportModalTitle.textContent = title;
+        reportModalBody.textContent = "report.txt not found.";
+        reportModal.classList.add("show");
+      }
+    }
+
     // intervals
     async function stopSilently() {
       try { await fetch("/api/stop", { method: "POST" }); } catch (_) {}
@@ -277,6 +489,17 @@
       skipFirstLog = true;
     }
 
+    reportbox.addEventListener("click", (e) => {
+      const btn = e.target.closest(".report-open");
+      if (!btn || btn.disabled) return;
+      openReport(btn.dataset.videoId || "");
+    });
+
+    reportModalClose.onclick = () => reportModal.classList.remove("show");
+    reportModal.onclick = (e) => {
+      if (e.target === reportModal) reportModal.classList.remove("show");
+    };
+
     (async () => {
       logbox.textContent = "";
       await fetchSchema();
@@ -286,8 +509,10 @@
       await clearLogFile(); // clear historical logs
       fetchStatus();
       fetchLog();
+      fetchReports();
       setInterval(fetchStatus, 2000);
       setInterval(fetchLog, 1000);
+      setInterval(fetchReports, 3000);
     })();
   </script>
 </body>

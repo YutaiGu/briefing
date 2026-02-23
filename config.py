@@ -30,6 +30,7 @@ UPDATE_LIMIT = int(_cfg["UPDATE_LIMIT"])
 TRANSCRIBER_LIMIT = _cfg["TRANSCRIBER_LIMIT"]
 SUMMARIZER_LIMIT = _cfg["SUMMARIZER_LIMIT"]
 PUSHER_LIMIT = int(_cfg["PUSHER_LIMIT"])
+PUSH_TO = str(_cfg.get("PUSH_TO", "ntfy"))
 DOWNLOAD_INTERVAL = int(_cfg["DOWNLOAD_INTERVAL"])
 PROCESS_INTERVAL = int(_cfg["PROCESS_INTERVAL"])
 PUSHER_INTERVAL = int(_cfg["PUSHER_INTERVAL"])
@@ -124,6 +125,7 @@ model_para = {
 
 
 def check_config() -> tuple[bool, list[str], list[str]]:
+    # dirs
     for d in [
         DATA_DIR,
         AUDIO_DIR,
@@ -133,4 +135,14 @@ def check_config() -> tuple[bool, list[str], list[str]]:
         REPORT_DIR,
     ]:
         d.mkdir(parents=True, exist_ok=True)
+    
+    # files (create if missing)
+    if not PENDING_FILE.exists():
+        PENDING_FILE.write_text("{}", encoding="utf-8")
+    if not CONFIG_FILE.exists():
+        CONFIG_FILE.write_text("", encoding="utf-8")
+    if not CONFIG_JSON.exists():
+        CONFIG_JSON.parent.mkdir(parents=True, exist_ok=True)
+        CONFIG_JSON.write_text("{}", encoding="utf-8")
+    
     return True, [], []

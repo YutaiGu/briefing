@@ -104,6 +104,30 @@ def clean_entries(session) -> int:
     deleted = 0
     cutoff = datetime.now() - timedelta(days=1)
 
+    stale_pending_deleted = 0
+    try:
+        pending_rows = (
+            session.query(Video).filter(
+                Video.downloaded == 0,
+                Video.transcribed == 0,
+                Video.summarized == 0,
+                Video.pushed == 0,
+            )
+            .order_by(Video.id.desc())
+            .all()
+        )
+
+        for v in pending_rows:
+            ts = datetime.strptime(v.inserted_at, "%Y%m%d")
+            if ts < cutoff:
+                session.delete(v)
+                stale_pending_deleted += 1
+
+        if stale_pending_deleted:
+            session.commit()
+    except Exception:
+        session.rollback()
+
     try:
         rows = (
             session.query(Video).filter(
@@ -118,49 +142,54 @@ def clean_entries(session) -> int:
 
         local_rows = []
         by_source = {}
-        to_delete = []
         for v in rows:
             if v.source == "local":
                 local_rows.append(v)
             else:
                 by_source.setdefault(v.source, []).append(v)
 
+        candidates = []
         # local rule
         for v in local_rows:
             ts = datetime.strptime(v.inserted_at, "%Y%m%d")
             if ts < cutoff:
-                session.delete(v)
-                to_delete.append(v.video_id)
-                deleted += 1
+                candidates.append(v)
 
         # yt-dlp rule
-        for src, src_rows in by_source.items():
+        for _, src_rows in by_source.items():
             # already sorted by downloaded_at
-            for v in src_rows[UPDATE_LIMIT:]:
-                session.delete(v)
-                to_delete.append(v.video_id)
-                deleted += 1
+            candidates.extend(src_rows[UPDATE_LIMIT:])
 
-        session.commit()
-        for vid in to_delete:
-            print(f"[DELETE] {vid}")
-            delete_audio(vid)
-        
-        return deleted
-    except Exception:
-        session.rollback()
-        return deleted
+        if not candidates:
+            return 0
+    
+        for v in candidates:
+            # delete file first
+            if not delete_audio_by_path(v.file_path):
+                continue
 
-def delete_audio(video_id: str) -> None:
-    try:
-        for p in AUDIO_DIR.rglob(f"{video_id}.*"):
+            # delete one DB row, one commit
             try:
-                if p.is_file():
-                    p.unlink()
-            except Exception:
-                pass
+                session.delete(v)
+                session.commit()
+                deleted += 1
+            except Exception as ex:
+                session.rollback()
+
+        return deleted
     except Exception:
-        pass
+        return deleted
+
+def delete_audio_by_path(file_path: str) -> bool:
+    try:
+        p = Path(file_path)
+        if p.exists() and p.is_file():
+            p.unlink()
+            print(f"[DELETE] {p.name}")
+        return True
+    except Exception as e:
+        print(f"Delete error on {file_path}: {e}")
+        return False
 
 def check_is_entry(entry: dict) -> bool:
     if not isinstance(entry, dict):

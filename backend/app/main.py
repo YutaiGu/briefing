@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
 import os
+import sqlite3
 import threading
 import time
 import webbrowser
@@ -22,6 +23,8 @@ app.add_middleware(
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 STATIC_DIR = BACKEND_ROOT / "static"
 MAIN_SCRIPT = BACKEND_ROOT.parent / "main.py"
+DB_PATH = BACKEND_ROOT.parent / "data" / "db.sqlite3"
+OUTPUT_DIR = BACKEND_ROOT.parent / "data" / "output"
 BROWSER_URL = os.environ.get("RUNNER_URL", "http://localhost:8000/")
 AUTO_OPEN = os.environ.get("AUTO_OPEN_BROWSER", "1") != "0"
 
@@ -98,3 +101,56 @@ def get_log(tail: int = 2000):
 def clear_log():
     runner.clear_log()
     return {"cleared": True}
+
+
+@app.get("/api/reports")
+def get_reports(limit: int = 200):
+    rows = []
+    limit = max(1, min(limit, 1000))
+    if not DB_PATH.exists():
+        return {"items": rows}
+
+    conn = sqlite3.connect(DB_PATH.as_posix())
+    conn.row_factory = sqlite3.Row
+    try:
+        cur = conn.execute(
+            """
+            SELECT id, video_id, title, source, downloaded_at, pushed, downloaded, webpage_url
+            FROM videos
+            WHERE downloaded = 1
+            ORDER BY downloaded_at DESC, id DESC
+            LIMIT ?
+            """,
+            (limit,),
+        )
+        for r in cur.fetchall():
+            video_id = (r["video_id"] or "").strip()
+            report_path = OUTPUT_DIR / video_id / "report.txt"
+            rows.append({
+                "id": r["id"],
+                "video_id": video_id,
+                "title": r["title"] or "",
+                "source": r["source"] or "",
+                "webpage_url": r["webpage_url"] or "",
+                "downloaded_at": r["downloaded_at"] or "",
+                "pushed": int(r["pushed"] or 0),
+                "report_exists": bool(video_id and report_path.exists()),
+            })
+    finally:
+        conn.close()
+
+    return {"items": rows}
+
+
+@app.get("/api/report/{video_id}")
+def get_report_detail(video_id: str):
+    v = (video_id or "").strip()
+    if not v:
+        raise HTTPException(status_code=400, detail="invalid video_id")
+    report_path = OUTPUT_DIR / v / "report.txt"
+    if not report_path.exists():
+        raise HTTPException(status_code=404, detail="report.txt not found")
+    return {
+        "video_id": v,
+        "content": report_path.read_text(encoding="utf-8"),
+    }
