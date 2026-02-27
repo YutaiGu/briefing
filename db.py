@@ -5,6 +5,7 @@ from sqlalchemy.inspection import inspect
 from datetime import datetime, timedelta
 from pathlib import Path
 import shutil
+import os, stat, time
 
 from config import DB_URL, AUDIO_DIR, OUTPUT_DIR, TEMPORARY_DIR, check_config, UPDATE_LIMIT
 
@@ -118,14 +119,15 @@ def clean_entries(session) -> int:
         )
 
         for v in pending_rows:
-            ts = datetime.strptime(v.inserted_at, "%Y%m%d")
+            ts = datetime.fromisoformat(v.inserted_at)
             if ts < cutoff:
                 session.delete(v)
                 stale_pending_deleted += 1
 
         if stale_pending_deleted:
             session.commit()
-    except Exception:
+    except Exception as e:
+        print(f"Error on clean_entries stale_pending_deleted: {e}")
         session.rollback()
 
     try:
@@ -151,7 +153,7 @@ def clean_entries(session) -> int:
         candidates = []
         # local rule
         for v in local_rows:
-            ts = datetime.strptime(v.inserted_at, "%Y%m%d")
+            ts = datetime.fromisoformat(v.inserted_at)
             if ts < cutoff:
                 candidates.append(v)
 
@@ -177,16 +179,20 @@ def clean_entries(session) -> int:
                 session.rollback()
 
         return deleted
-    except Exception:
+    except Exception as e:
+        print(f"Error on clean_entries rows: {e}")
         return deleted
 
 def delete_audio_by_path(file_path: str) -> bool:
     try:
         p = Path(file_path)
         if p.exists() and p.is_file():
+            os.chmod(p, stat.S_IWRITE)  # clear readonly bit first (required for deleting .m4a files on Windows)
+            time.sleep(0.5)
             p.unlink()
             print(f"[DELETE] {p.name}")
-        return True
+            return True
+        return False
     except Exception as e:
         print(f"Delete error on {file_path}: {e}")
         return False
@@ -222,13 +228,13 @@ def init_entries(session, entries) -> int:
         pushed            Guaranteed  <-
         video_id          Exist
     '''
-    inserted_at = datetime.now().strftime("%Y%m%d")
     inserted = 0
 
     for e in entries:
         if not check_is_entry(e):
             continue
-
+        
+        inserted_at = datetime.now().isoformat(timespec="seconds")
         row = Video(
             source=e["source"],
             extractor=e.get("extractor"),
@@ -295,7 +301,7 @@ def get_undownloaded(session, source_url: str, limit: int) -> list:
     q = (
         session.query(Video)
         .filter(Video.downloaded == 0, Video.source == source_url)
-        .order_by(Video.id.asc())  # Oldest first
+        .order_by(Video.inserted_at.asc())  # Oldest first
     )
     if limit:
         q = q.limit(limit)
@@ -305,7 +311,7 @@ def get_untranscribed(session, limit: int):
     q = (
         session.query(Video)
         .filter(Video.downloaded == 1, Video.transcribed == 0)
-        .order_by(Video.id.asc())  # Oldest first
+        .order_by(Video.inserted_at.asc())  # Oldest first
     )
     if limit:
         q = q.limit(limit)
@@ -315,7 +321,7 @@ def get_unsummarized(session, limit: int):
     q = (
         session.query(Video)
         .filter(Video.downloaded == 1, Video.transcribed == 1, Video.summarized == 0)
-        .order_by(Video.id.asc())  # Oldest first
+        .order_by(Video.inserted_at.asc())  # Oldest first
     )
     if limit:
         q = q.limit(limit)
@@ -328,7 +334,7 @@ def get_unpushed(session, limit: int):
                 Video.transcribed == 1, 
                 Video.summarized == 1, 
                 Video.pushed == 0)
-        .order_by(Video.id.asc())  # Oldest first
+        .order_by(Video.inserted_at.asc())  # Oldest first
     )
     if limit:
         q = q.limit(limit)

@@ -119,6 +119,7 @@ def fetch_all_entries(source_url: str) -> list:
         entries.append(entry)
 
     print(f"Fetched {len(entries)} entries from {source_url}")
+    entries = list(reversed(entries))  # # old -> new
     return entries
 
 def download_entry(entry: Video) -> bool:
@@ -188,7 +189,7 @@ def download_entry(entry: Video) -> bool:
 def import_external_entries(session):
     # Scan AUDIO_DIR for audio files not in DB and insert them for transcription.
     now = datetime.now()
-    inserted_at = now.strftime("%Y%m%d")
+    inserted_at = datetime.now().isoformat(timespec="seconds")
     PARTIAL_SUFFIXES = {".part", ".tmp", ".download"}
     Video_SUFFIXES = {
         ".mp3", ".wav", ".m4a", ".aac", ".mp4", ".mkv", ".mov", ".avi", ".webm", ".flv"
