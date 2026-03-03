@@ -1,7 +1,17 @@
 # -*- mode: python ; coding: utf-8 -*-
 # PyInstaller spec file for briefing.exe
 
+import os, sys, glob
+
 block_cipher = None
+
+# venv fix: python3xx.dll lives in the base Python install, not in the venv.
+# PyInstaller only searches sys.executable's directory, so it misses it.
+_py_dll = os.path.join(
+    sys.base_prefix,
+    f"python{sys.version_info.major}{sys.version_info.minor}.dll",
+)
+_extra_binaries = [(_py_dll, ".")] if os.path.exists(_py_dll) else []
 
 datas = [
     # Prompt templates (read-only, loaded from _MEIPASS via config.py)
@@ -66,12 +76,19 @@ hiddenimports = [
     # stdlib / other
     "multiprocessing",
     "requests",
+    # backend app — loaded dynamically via uvicorn string "backend.app.main:app"
+    "backend",
+    "backend.app",
+    "backend.app.main",
+    "backend.app.config_store",
+    "backend.app.config_schema",
+    "backend.app.runner",
 ]
 
 a = Analysis(
     ["launcher.py"],
     pathex=["."],
-    binaries=[],
+    binaries=_extra_binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],

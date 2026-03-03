@@ -80,7 +80,6 @@ def main() -> None:
         "Briefing",
         f"http://127.0.0.1:{port}",
         min_size=(800, 600),
-        fullscreen=True,
     )
     # Blocks until the window is closed; daemon server thread exits with the process.
     webview.start()

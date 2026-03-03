@@ -21,7 +21,7 @@ OUTPUT_DIR = DATA_DIR / "output"
 TEMPORARY_DIR = DATA_DIR / "temporary"
 REPORT_DIR = DATA_DIR / "reports"
 PENDING_FILE = DATA_DIR / ".pending.json"
-CONFIG_FILE = DATA_DIR / "config.txt"  # secret env
+CONFIG_FILE = BASE_DIR / "config.txt"  # secret env
 CONFIG_JSON = BASE_DIR / "backend" / "data" / "config.json"
 DB_URL = f"sqlite:///{(DATA_DIR / 'db.sqlite3').as_posix()}"  # SQLite
 
