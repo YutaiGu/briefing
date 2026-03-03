@@ -32,6 +32,8 @@
     .dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
     .dot-green { background: #22c55e; }
     .dot-gray { background: #64748b; }
+    .dot-red { background: #ef4444; }
+    .report-item.is-new { border-color: #fca5a5; background: #fff5f5; box-shadow: 0 0 0 2px rgba(239,68,68,0.14); }
     .spinner { width: 10px; height: 10px; border: 2px solid #f59e0b; border-top-color: transparent; border-radius: 50%; display: inline-block; animation: spin 0.9s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .modal { position: fixed; inset: 0; background: rgba(2,6,23,0.72); display: none; align-items: center; justify-content: center; padding: 24px; z-index: 50; }
@@ -74,35 +76,41 @@
       <h2>Briefing Panel</h2>
     </header>
 
-    <details id="cfg-accordion">
-      <summary style="cursor:pointer;font-weight:600;">Config Panel</summary>
-      <div style="margin-top:12px;">
-        <div id="config-grid" class="grid"></div>
-        <button id="save-btn" style="margin-top:12px;">Save Config</button>
-        <span id="save-status" class="muted"></span>
-      </div>
-    </details>
+    <section>
+      <details id="cfg-accordion">
+        <summary style="cursor:pointer;font-weight:600;">Config Panel</summary>
+        <div style="margin-top:12px;">
+          <div id="config-grid" class="grid"></div>
+          <button id="save-btn" style="margin-top:12px;">Save Config</button>
+          <span id="save-status" class="muted"></span>
+        </div>
+      </details>
+    </section>
 
-    <details id="secrets-accordion" style="margin-top:8px;">
-      <summary style="cursor:pointer;font-weight:600;">Secrets</summary>
-      <div style="margin-top:12px;">
-        <div id="secrets-grid" class="grid"></div>
-        <button id="save-secrets-btn" style="margin-top:12px;">Save Secrets</button>
-        <span id="secrets-status" class="muted"></span>
-      </div>
-    </details>
+    <section>
+      <details id="secrets-accordion">
+        <summary style="cursor:pointer;font-weight:600;">Secrets</summary>
+        <div style="margin-top:12px;">
+          <div id="secrets-grid" class="grid"></div>
+          <button id="save-secrets-btn" style="margin-top:12px;">Save Secrets</button>
+          <span id="secrets-status" class="muted"></span>
+        </div>
+      </details>
+    </section>
 
-    <details id="channels-accordion" style="margin-top:8px;">
-      <summary style="cursor:pointer;font-weight:600;">Channels</summary>
-      <div style="margin-top:12px;">
-        <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;">
-          <span id="channels-label" class="tip" data-tip="">Source Urls</span>
-          <textarea id="channels-input" style="min-height:140px;padding:8px;border:1px solid #cfd5e0;border-radius:6px;font-family:monospace;"></textarea>
-        </label>
-        <button id="save-channels-btn" style="margin-top:12px;">Save Channels</button>
-        <span id="channels-status" class="muted"></span>
-      </div>
-    </details>
+    <section>
+      <details id="channels-accordion">
+        <summary style="cursor:pointer;font-weight:600;">Channels</summary>
+        <div style="margin-top:12px;">
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;">
+            <span id="channels-label" class="tip" data-tip="">Source Urls</span>
+            <textarea id="channels-input" style="min-height:140px;padding:8px;border:1px solid #cfd5e0;border-radius:6px;font-family:monospace;"></textarea>
+          </label>
+          <button id="save-channels-btn" style="margin-top:12px;">Save Channels</button>
+          <span id="channels-status" class="muted"></span>
+        </div>
+      </details>
+    </section>
 
     <section>
       <div class="row">
@@ -165,6 +173,8 @@
     const reportModalClose = document.getElementById("report-modal-close");
     let reportTitleMap = {};
     let isRunning = false;
+    let startupDoneIds = null; // null = first fetch not yet done
+    const newIds = new Set();  // video_ids that became done during this session
 
     async function fetchSchema() {
       const res = await fetch("/api/schema");
@@ -430,6 +440,7 @@
     }
 
     function statusHtml(item) {
+      if (newIds.has(item.video_id)) return `<span class="status"><span class="dot dot-red"></span>NEW</span>`;
       if (item.pushed === 1) return `<span class="status"><span class="dot dot-green"></span>done</span>`;
       if (isRunning) return `<span class="status"><span class="spinner"></span>running</span>`;
       return `<span class="status"><span class="dot dot-gray"></span>queued</span>`;
@@ -449,8 +460,9 @@
         const date = escapeHtml(formatDownloadedAt(item.downloaded_at));
         const canOpen = !!item.report_exists;
         if (item.video_id) reportTitleMap[item.video_id] = clean;
+        const isNew = newIds.has(item.video_id);
         return `
-          <div class="report-item">
+          <div class="report-item${isNew ? " is-new" : ""}">
             <div>
               <div class="report-title">${title}</div>
               <div class="report-meta">${date}</div>
@@ -497,7 +509,19 @@
       try {
         const res = await fetch("/api/reports?limit=300");
         const data = await res.json();
-        renderReports(data.items || []);
+        const items = data.items || [];
+        if (startupDoneIds === null) {
+          // First fetch: snapshot all already-done items — they get "done", not "NEW"
+          startupDoneIds = new Set(items.filter(i => i.pushed === 1).map(i => i.video_id));
+        } else {
+          // Subsequent fetches: anything newly pushed that wasn't done at startup → NEW
+          items.forEach(item => {
+            if (item.pushed === 1 && !startupDoneIds.has(item.video_id)) {
+              newIds.add(item.video_id);
+            }
+          });
+        }
+        renderReports(items);
       } catch (_) {
         reportbox.innerHTML = `<div class="report-meta">Report list load failed.</div>`;
       }
@@ -505,6 +529,7 @@
 
     async function openReport(videoId) {
       if (!videoId) return;
+      newIds.delete(videoId);
       const title = reportTitleMap[videoId] || videoId;
       try {
         const res = await fetch(`/api/report/${encodeURIComponent(videoId)}`);
