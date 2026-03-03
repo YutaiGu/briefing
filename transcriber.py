@@ -1,8 +1,7 @@
 import os
 from pathlib import Path
 from datetime import datetime
-import torch
-import whisper
+from faster_whisper import WhisperModel
 import shutil
 import contextlib
 import threading
@@ -10,7 +9,7 @@ import time
 from moviepy import AudioFileClip
 from multiprocessing import Pool, cpu_count
 
-from config import DATA_DIR, api_model, TRANSCRIBER_LIMIT, POOL_NUM
+from config import DATA_DIR, api_model, TRANSCRIBER_LIMIT, POOL_NUM, OUTPUT_DIR, TEMPORARY_DIR
 from db import get_untranscribed, update_entries, entry_to_payload, payload_to_entry
 
 _MODEL = None
@@ -46,24 +45,25 @@ def check_whisper_model() -> None:
     # 2) ensure whisper is available
     model_name = api_model["whisper_model"]
     try:
-        _ = whisper.load_model(model_name)
+        _ = WhisperModel(model_name, device="cpu", compute_type="int8")
     except Exception as e:
         print(f"Failed to load model {model_name}: {e}")
         raise
 
-def load_whisper_model() -> None:
+def load_whisper_model(device: str = "cpu", compute_type: str = "int8") -> None:
     global _MODEL
     model_name = api_model["whisper_model"]
     try:
         if _MODEL is None:
-            _MODEL = whisper.load_model(model_name)
+            _MODEL = WhisperModel(model_name, device=device, compute_type=compute_type)
     except Exception as e:
         print(f"Failed to load model {model_name}: {e}")
         raise
 
 def Clean_Files(filename, temporary_dir):
-    import shutil
-    shutil.rmtree(f"{temporary_dir}/{filename}_cut")
+    p = Path(temporary_dir) / filename
+    if p.exists():
+        shutil.rmtree(p)
 
 def Split_Video_File(video_file, temporary_dir, split_duration=1800):
     """
@@ -111,8 +111,7 @@ def Split_Video_File(video_file, temporary_dir, split_duration=1800):
 
 
 def Whisper_Audio(video_file, language=None):
-    load_whisper_model()
-    use_fp16 = torch.cuda.is_available()
+    load_whisper_model(device="cpu", compute_type="int8")
 
     def heartbeat():
         while True:
@@ -123,17 +122,15 @@ def Whisper_Audio(video_file, language=None):
 
     try:
         with open(os.devnull, "w") as devnull, contextlib.redirect_stderr(devnull):
-            result = _MODEL.transcribe(
+            segments, info = _MODEL.transcribe(
                 video_file,
-                verbose=False,
                 language=language,
-                fp16=use_fp16,
             )
+            text = "".join(seg.text for seg in segments)
     except Exception as e:
         raise RuntimeError(f"Whisper failed on {video_file}: {e}") from e
     
-    return result["text"]
-
+    return text
 
 def Video_Processing(payload):
     raw = payload['language']
@@ -151,36 +148,32 @@ def Video_Processing(payload):
     print(f"[START] {filename}")
     start_time = datetime.now()
     start_time = start_time.strftime("%Y-%m-%d %H:%M:%S")
-    cut_line = "\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n"
 
     # create necessary files
-    temporary_dir = (DATA_DIR / "temporary" / filename).as_posix()
+    temporary_dir = (TEMPORARY_DIR / filename).as_posix()
     Path(temporary_dir).mkdir(parents=True, exist_ok=True)
 
-    output_dir = DATA_DIR / "output" / filename
+    output_dir = OUTPUT_DIR / filename
     output_dir.mkdir(parents=True, exist_ok=True)
 
     whisper_path = (output_dir / "whisper.txt").as_posix()
-    history_path = (output_dir / "history.txt").as_posix()
 
     # Clear the contents
     with open(whisper_path, "w", encoding="utf-8") as whisper_file:
-        whisper_file.write(f"{filename} at {start_time}:{cut_line}")
-
-    with open(history_path, "w", encoding="utf-8") as history_file:
-        history_file.write(f"{filename} at {start_time}:{cut_line}")
+        whisper_file.write(f"{filename} at {start_time}:\n")
 
     # Split
-    filelist = Split_Video_File(video_file, temporary_dir)
+    # filelist = Split_Video_File(video_file, temporary_dir)
     print(f"[WHISPER] {filename} ")
 
     # Write
-    for fp in filelist:
-        result = Whisper_Audio(fp, language=language)
-        # progress_bar.update(1)
+    #for fp in filelist:
+    #    result = Whisper_Audio(fp, language=language)
+    
+    result = Whisper_Audio(video_file, language=language)
+    with open(whisper_path, "a", encoding="utf-8") as whisper_file:
+        whisper_file.write(result + "\n")
 
-        with open(whisper_path, "a", encoding="utf-8") as whisper_file:
-            whisper_file.write(result + "\n")
     print(f"[WHISPER DONE] {filename}")
 
     Clean_Files(filename, temporary_dir)
