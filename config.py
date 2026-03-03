@@ -1,13 +1,22 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
-# Dir
-BASE_DIR = Path(__file__).resolve().parent
+# Dir — frozen-aware.
+# User-writable data (db, audio, output, config) lives next to the exe.
+# Read-only bundled assets (prompts) live in PyInstaller's _MEIPASS extraction dir.
+if getattr(sys, 'frozen', False):
+    BASE_DIR = Path(sys.executable).resolve().parent
+    _BUNDLE  = Path(sys._MEIPASS)
+else:
+    BASE_DIR = Path(__file__).resolve().parent
+    _BUNDLE  = BASE_DIR
+
 DATA_DIR = BASE_DIR / "data"
 AUDIO_DIR = DATA_DIR / "audio"
-PROMPT_DIR = DATA_DIR / "prompts"
+PROMPT_DIR = _BUNDLE / "data" / "prompts"  # bundled read-only asset
 OUTPUT_DIR = DATA_DIR / "output"
 TEMPORARY_DIR = DATA_DIR / "temporary"
 REPORT_DIR = DATA_DIR / "reports"

@@ -1,8 +1,13 @@
 from pathlib import Path
 import json
+import sys
 from .config_schema import SCHEMA, validate_and_merge
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+# Frozen-aware: config.json lives in backend/data/ alongside the exe.
+if getattr(sys, 'frozen', False):
+    DATA_DIR = Path(sys.executable).resolve().parent / "backend" / "data"
+else:
+    DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 CONFIG_PATH = DATA_DIR / "config.json"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 

@@ -1,24 +1,9 @@
-from serverchan_sdk import sc_send
 import requests
 from datetime import datetime
 
-from config import api_model, READ_LANGUAGE, OUTPUT_DIR, SERVER3_KEY, NTFY_SERVER, COMPRESS_LEVEl, REPORT_DIR, PUSH_TO
+from config import api_model, READ_LANGUAGE, OUTPUT_DIR, NTFY_SERVER, COMPRESS_LEVEl, REPORT_DIR, PUSH_TO
 from db import get_unpushed, update_entries
 from summarizer import request_gpt
-
-def pushto_Server3(message: str) -> bool:
-    if not SERVER3_KEY:
-        return False
-    options = {"tags": "Briefing Summary"}
-    try:
-        response = sc_send(SERVER3_KEY, "Briefing Summary", message, options)
-        if response.get("code") != 0:
-            print(f"Push Error: {response}")
-            return False
-        return True
-    except Exception as e:
-        print(f"Push Error (Server3): {e}")
-        return False
 
 def pushto_ntfy(message: str) -> bool:
     if NTFY_SERVER is None:
@@ -137,9 +122,7 @@ def pusher(session, limit: int) -> None:
 
     try:
         target = (PUSH_TO or "ntfy").strip()
-        if target == "Server3":
-            ok = pushto_Server3(body)
-        elif target == "LocalFile":
+        if target == "LocalFile":
             ok = pushto_localfile(body)
         else:
             ok = pushto_ntfy(body)

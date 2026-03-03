@@ -5,7 +5,11 @@ import os
 from pathlib import Path
 from typing import Optional
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+# Frozen-aware: logs and pid live in backend/data/ alongside the exe.
+if getattr(sys, 'frozen', False):
+    DATA_DIR = Path(sys.executable).resolve().parent / "backend" / "data"
+else:
+    DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 LOG_PATH = DATA_DIR / "run.log"
 PID_PATH = DATA_DIR / "run.pid"
 
@@ -42,11 +46,18 @@ class Runner:
             return None
         LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
         log_file = LOG_PATH.open("a", buffering=1, encoding="utf-8")
+        if getattr(sys, 'frozen', False):
+            # Re-invoke the frozen exe in worker mode; main.py doesn't exist separately.
+            cmd      = [sys.executable, "--worker"]
+            work_dir = Path(sys.executable).resolve().parent
+        else:
+            cmd      = [sys.executable, "-u", str(main_script)]
+            work_dir = main_script.parent
         proc = subprocess.Popen(
-            [sys.executable, "-u", str(main_script)],
+            cmd,
             stdout=log_file,
             stderr=subprocess.STDOUT,
-            cwd=main_script.parent,
+            cwd=str(work_dir),
         )
         PID_PATH.write_text(str(proc.pid))
         self.process = proc

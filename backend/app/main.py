@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 import os
 import sqlite3
+import sys
 import threading
 import time
 import webbrowser
@@ -20,13 +21,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-BACKEND_ROOT = Path(__file__).resolve().parent.parent
-STATIC_DIR = BACKEND_ROOT / "static"
-MAIN_SCRIPT = BACKEND_ROOT.parent / "main.py"
-DB_PATH = BACKEND_ROOT.parent / "data" / "db.sqlite3"
-OUTPUT_DIR = BACKEND_ROOT.parent / "data" / "output"
+# Frozen-aware paths.
+# Static files are bundled read-only assets (from _MEIPASS).
+# DB, output, and main.py are resolved relative to the exe directory.
+if getattr(sys, 'frozen', False):
+    STATIC_DIR  = Path(sys._MEIPASS) / "backend" / "static"
+    _base       = Path(sys.executable).resolve().parent
+else:
+    _backend    = Path(__file__).resolve().parent.parent   # = backend/
+    STATIC_DIR  = _backend / "static"
+    _base       = _backend.parent                          # = project root
+
+MAIN_SCRIPT = _base / "main.py"
+DB_PATH     = _base / "data" / "db.sqlite3"
+OUTPUT_DIR  = _base / "data" / "output"
 BROWSER_URL = os.environ.get("RUNNER_URL", "http://localhost:8000/")
-AUTO_OPEN = os.environ.get("AUTO_OPEN_BROWSER", "1") != "0"
+AUTO_OPEN   = os.environ.get("AUTO_OPEN_BROWSER", "1") != "0"
 
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

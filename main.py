@@ -1,9 +1,20 @@
 from pathlib import Path
 import json
 import os
+import sys
 
-CONFIG_PATH = Path(__file__).parent / "backend" / "data" / "config.json"
-FFMPEG_DIR = Path(__file__).parent / "data" / "ffmpeg"
+# Frozen-aware paths.
+# ffmpeg.exe is a bundled read-only asset extracted to _MEIPASS.
+# config.json is user-writable and lives next to the exe.
+if getattr(sys, 'frozen', False):
+    _base   = Path(sys.executable).resolve().parent
+    _bundle = Path(sys._MEIPASS)
+else:
+    _base   = Path(__file__).parent
+    _bundle = _base
+
+CONFIG_PATH = _base / "backend" / "data" / "config.json"
+FFMPEG_DIR  = _bundle / "data" / "ffmpeg"
 os.environ["PATH"] = str(FFMPEG_DIR) + os.pathsep + os.environ.get("PATH", "")
 
 import time

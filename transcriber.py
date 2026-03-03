@@ -9,7 +9,7 @@ import time
 from moviepy import AudioFileClip
 from multiprocessing import Pool, cpu_count
 
-from config import DATA_DIR, api_model, TRANSCRIBER_LIMIT, POOL_NUM, OUTPUT_DIR, TEMPORARY_DIR
+from config import api_model, TRANSCRIBER_LIMIT, POOL_NUM, OUTPUT_DIR, TEMPORARY_DIR
 from db import get_untranscribed, update_entries, entry_to_payload, payload_to_entry
 
 _MODEL = None
