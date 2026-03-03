@@ -27,3 +27,12 @@
 # allow data resources
 !data/prompts/**
 !data/ffmpeg/**
+
+# allow build system
+!briefing.spec
+!build.bat
+!hooks/
+!hooks/*.py
+!.github/
+!.github/workflows/
+!.github/workflows/*.yml

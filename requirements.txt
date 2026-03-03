@@ -7,3 +7,4 @@ pyinstaller
 fastapi
 uvicorn[standard]
 pywebview
+faster-whisper

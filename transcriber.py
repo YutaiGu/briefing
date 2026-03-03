@@ -6,7 +6,7 @@ import shutil
 import contextlib
 import threading
 import time
-from moviepy import AudioFileClip
+#from moviepy import AudioFileClip
 from multiprocessing import Pool, cpu_count
 
 from config import api_model, TRANSCRIBER_LIMIT, POOL_NUM, OUTPUT_DIR, TEMPORARY_DIR
@@ -65,6 +65,7 @@ def Clean_Files(filename, temporary_dir):
     if p.exists():
         shutil.rmtree(p)
 
+'''
 def Split_Video_File(video_file, temporary_dir, split_duration=1800):
     """
     Split a video file into multiple segments based on the specified duration.
@@ -108,7 +109,7 @@ def Split_Video_File(video_file, temporary_dir, split_duration=1800):
             
     video.close()
     return filelist
-
+'''
 
 def Whisper_Audio(video_file, language=None):
     load_whisper_model(device="cpu", compute_type="int8")
@@ -165,10 +166,6 @@ def Video_Processing(payload):
     # Split
     # filelist = Split_Video_File(video_file, temporary_dir)
     print(f"[WHISPER] {filename} ")
-
-    # Write
-    #for fp in filelist:
-    #    result = Whisper_Audio(fp, language=language)
     
     result = Whisper_Audio(video_file, language=language)
     with open(whisper_path, "a", encoding="utf-8") as whisper_file:
