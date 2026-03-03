@@ -11,6 +11,11 @@ else:
 CONFIG_PATH = DATA_DIR / "config.json"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
+# Eagerly create config.json with defaults on first run, before any API call.
+if not CONFIG_PATH.exists():
+    _defaults = validate_and_merge({})
+    CONFIG_PATH.write_text(json.dumps(_defaults, indent=2), encoding="utf-8")
+
 
 def load_config() -> dict:
     file_data = {}
