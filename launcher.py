@@ -79,7 +79,7 @@ def main() -> None:
     window = webview.create_window(
         "Briefing",
         f"http://127.0.0.1:{port}",
-        min_size=(800, 600),
+        min_size=(1200, 900),
     )
     # Blocks until the window is closed; daemon server thread exits with the process.
     webview.start()

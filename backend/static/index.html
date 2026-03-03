@@ -83,6 +83,15 @@
       </div>
     </details>
 
+    <details id="secrets-accordion" style="margin-top:8px;">
+      <summary style="cursor:pointer;font-weight:600;">Secrets</summary>
+      <div style="margin-top:12px;">
+        <div id="secrets-grid" class="grid"></div>
+        <button id="save-secrets-btn" style="margin-top:12px;">Save Secrets</button>
+        <span id="secrets-status" class="muted"></span>
+      </div>
+    </details>
+
     <details id="channels-accordion" style="margin-top:8px;">
       <summary style="cursor:pointer;font-weight:600;">Channels</summary>
       <div style="margin-top:12px;">
@@ -138,6 +147,9 @@
     const cfgGrid = document.getElementById("config-grid");
     const saveBtn = document.getElementById("save-btn");
     const saveStatus = document.getElementById("save-status");
+    const secretsGrid = document.getElementById("secrets-grid");
+    const saveSecretsBtn = document.getElementById("save-secrets-btn");
+    const secretsStatus = document.getElementById("secrets-status");
     const channelsInput = document.getElementById("channels-input");
     const saveChannelsBtn = document.getElementById("save-channels-btn");
     const channelsStatus = document.getElementById("channels-status");
@@ -165,6 +177,7 @@
       const res = await fetch("/api/config");
       config = await res.json();
       renderConfig();
+      renderSecrets();
     }
 
     function renderConfig() {
@@ -172,8 +185,19 @@
       schema.forEach(f => {
         const pathKey = f.key || f.name;
         if (pathKey === "SOURCE_URLS") return; // channels handled separately
+        if (f.group === "secrets") return;      // secrets handled separately
         const value = getValueByPath(config, pathKey);
         cfgGrid.appendChild(fieldFromSchema(f, value));
+      });
+    }
+
+    function renderSecrets() {
+      secretsGrid.innerHTML = "";
+      schema.forEach(f => {
+        if (f.group !== "secrets") return;
+        const pathKey = f.key || f.name;
+        const value = getValueByPath(config, pathKey);
+        secretsGrid.appendChild(fieldFromSchema(f, value));
       });
     }
 
@@ -218,7 +242,7 @@
         if (f.max !== undefined) el.max = f.max;
       } else {
         el = document.createElement("input");
-        el.type = "text";
+        el.type = f.secret ? "password" : "text";
         el.value = displayValue ?? "";
       }
       const pathKey = f.key || f.name;
@@ -267,12 +291,30 @@
       if (res.ok) {
         config = await res.json();
         renderConfig();
+        renderSecrets();
         renderChannels();
         saveStatus.textContent = "Saved";
       } else {
         saveStatus.textContent = "Failed to save";
       }
       setTimeout(() => saveStatus.textContent = "", 1500);
+    };
+
+    saveSecretsBtn.onclick = async () => {
+      secretsStatus.textContent = "Saving...";
+      const res = await fetch("/api/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config)
+      });
+      if (res.ok) {
+        config = await res.json();
+        renderSecrets();
+        secretsStatus.textContent = "Saved";
+      } else {
+        secretsStatus.textContent = "Failed to save";
+      }
+      setTimeout(() => secretsStatus.textContent = "", 1500);
     };
 
     saveChannelsBtn.onclick = async () => {
@@ -503,7 +545,7 @@
     (async () => {
       logbox.textContent = "";
       await fetchSchema();
-      await fetchConfig();
+      await fetchConfig();  // calls renderConfig + renderSecrets internally
       renderChannels();
       await stopSilently(); // ensure status starts stopped
       await clearLogFile(); // clear historical logs

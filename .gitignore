@@ -16,13 +16,11 @@
 # allow backend files
 !backend/app/*.py
 !backend/static/**
-!backend/app/data/config.json
 
 # allow traversal
 !data/
 !data/prompts/
 !data/ffmpeg/
-!data/config.txt
 
 # allow data resources
 !data/prompts/**

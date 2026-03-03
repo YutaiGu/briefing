@@ -21,7 +21,6 @@ OUTPUT_DIR = DATA_DIR / "output"
 TEMPORARY_DIR = DATA_DIR / "temporary"
 REPORT_DIR = DATA_DIR / "reports"
 PENDING_FILE = DATA_DIR / ".pending.json"
-CONFIG_FILE = BASE_DIR / "config.txt"  # secret env
 CONFIG_JSON = BASE_DIR / "backend" / "data" / "config.json"
 DB_URL = f"sqlite:///{(DATA_DIR / 'db.sqlite3').as_posix()}"  # SQLite
 
@@ -48,33 +47,17 @@ COMPRESS_LEVEl = int(_cfg["COMPRESS_LEVEl"])
 ENTRIES_LIMIT = f"1-{int(_cfg['ENTRIES_LIMIT'])}"  # special: "1-x"
 SOURCE_URLS = [str(x).strip() for x in _cfg.get("SOURCE_URLS", []) if str(x).strip()]
 
-# load secret env
-def load_config(path: Path) -> dict[str, str]:
-    if not path.exists():
-        raise FileNotFoundError(f"Missing configuration: {path}")
+NTFY_SERVER = _cfg.get("NTFY_SERVER") or None
 
-    data = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        k, v = line.split("=", 1)
-        data[k.strip()] = v.strip()
-    return data
-
-_secrets = load_config(CONFIG_FILE)
-
-SERVER3_KEY = _secrets.get("SERVER3_KEY", None)
-NTFY_SERVER = _secrets.get("NTFY_SERVER", None)
-
-# configuration
-try:
-    api_info = {
-        "api_key": _secrets["API_KEY"],
-        "url_redirect": _secrets["API_URL"],
-    }
-except KeyError as e:
-    raise RuntimeError(f"Failed to read API_KEY or API_URL: {e}")
+# configuration — all secrets come from config.json
+_api_key = (_cfg.get("API_KEY") or "").strip()
+_api_url = (_cfg.get("API_URL") or "").strip()
+if not _api_key or not _api_url:
+    raise RuntimeError("API_KEY and API_URL must be set in the Secrets panel")
+api_info = {
+    "api_key": _api_key,
+    "url_redirect": _api_url,
+}
 
 api_model = {
     "whisper_model": _cfg["whisper_model"],
@@ -148,8 +131,6 @@ def check_config() -> tuple[bool, list[str], list[str]]:
     # files (create if missing)
     if not PENDING_FILE.exists():
         PENDING_FILE.write_text("{}", encoding="utf-8")
-    if not CONFIG_FILE.exists():
-        CONFIG_FILE.write_text("", encoding="utf-8")
     if not CONFIG_JSON.exists():
         CONFIG_JSON.parent.mkdir(parents=True, exist_ok=True)
         CONFIG_JSON.write_text("{}", encoding="utf-8")

@@ -131,6 +131,35 @@ SCHEMA: List[Dict[str, Any]] = [
         "desc": "Summary Text Volume Reduction % (Recommended: 100%)",
         "cn": "总结文本量压缩% (推荐100%)",
     },
+    # --- Secrets (config.txt) ---
+    {
+        "name": "API Key",
+        "key": "API_KEY",
+        "type": "str",
+        "default": "",
+        "desc": "LLM API key",
+        "cn": "LLM API 密钥",
+        "group": "secrets",
+        "secret": True,
+    },
+    {
+        "name": "API URL",
+        "key": "API_URL",
+        "type": "str",
+        "default": "https://api.openai.com/v1/chat/completions",
+        "desc": "API endpoint URL",
+        "cn": "API 接口地址",
+        "group": "secrets",
+    },
+    {
+        "name": "NTFY Server",
+        "key": "NTFY_SERVER",
+        "type": "str",
+        "default": "",
+        "desc": "NTFY server ID",
+        "cn": "NTFY 服务器 ID",
+        "group": "secrets",
+    },
 ]
 
 

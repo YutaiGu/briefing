@@ -52,11 +52,6 @@ jobs:
 
             1. Download `briefing-${{ github.ref_name }}-windows.zip`
             2. Extract to any folder (e.g. `C:\briefing\`)
-            3. Create `data\config.txt` with your API keys:
-               ```
-               API_KEY=your_openai_api_key
-               API_URL=https://api.openai.com/v1/chat/completions
-               NTFY_SERVER=your_ntfy_topic
-               ```
-            4. Run `briefing.exe` — the window opens automatically
+            3. Run `briefing.exe` — the browser panel opens automatically
+            4. Open the **Secrets** panel and fill in your API Key, API URL, and NTFY Server, then save
           files: dist/briefing-${{ github.ref_name }}-windows.zip
