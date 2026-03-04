@@ -48,6 +48,13 @@ def _run_server(port: int) -> None:
 
 def _run_worker() -> None:
     """Run the background processing loop (download / transcribe / push)."""
+    import os
+    import socket
+    try:
+        with socket.create_connection(("huggingface.co", 443), timeout=6):
+            pass
+    except OSError:
+        os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
     from main import main as worker_main
     worker_main()
 
@@ -76,7 +83,7 @@ def main() -> None:
         sys.exit(1)
 
     import webview
-    window = webview.create_window(
+    webview.create_window(
         "Briefing",
         f"http://127.0.0.1:{port}",
         width=1440,
@@ -84,7 +91,7 @@ def main() -> None:
         min_size=(900, 600),
     )
     # Blocks until the window is closed; daemon server thread exits with the process.
-    webview.start()
+    webview.start(gui="edgechromium")
     sys.exit(0)
 
 
