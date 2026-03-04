@@ -48,7 +48,7 @@ The system will automatically detect and process them.
 
 ![panel](images/2.png)
 
-### #2.2 GUI Reading Interface
+### 2.2 GUI Reading Interface
 
 ![panel](images/4.png)
 
@@ -88,7 +88,7 @@ Beginner-friendly tutorial (third-party, OpenAI-compatible API):
 
 These resources provide step-by-step guidance on how to obtain an API key and configure it correctly.
 
-### 3.4 Notification Configuration (ntfy)
+### 3.4 ntfy Notifications (Optional)
 
 This project uses **ntfy** as the message delivery channel.
 
