@@ -87,13 +87,27 @@ def fetch_all_entries(source_url: str) -> list:
             "extract_flat": True,
         }
 
-        if firefox_cookie_available():
-            ydl_opts["cookiesfrombrowser"] = ("firefox",)
-        elif find_cookies_txt():
-            ydl_opts["cookiefile"] = str(BASE_DIR / "cookies.txt")
+        attempt_opts = []
 
-        with YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(source_url, download=False)
+        if firefox_cookie_available():
+            attempt_opts.append({**ydl_opts, "cookiesfrombrowser": ("firefox",)})
+
+        if find_cookies_txt():
+            attempt_opts.append({**ydl_opts, "cookiefile": str(BASE_DIR / "cookies.txt")})
+
+        attempt_opts.append(ydl_opts)
+
+        info = None
+
+        for opts in attempt_opts:
+            try:
+                with YoutubeDL(opts) as ydl:
+                    info = ydl.extract_info(source_url, download=False)
+                if info:
+                    break
+            except Exception as e:
+                print(e)
+        
         if not info:
             return []
     except Exception as e:
@@ -174,32 +188,40 @@ def download_entry(entry: Video) -> bool:
         "outtmpl": outtmpl,
     }
 
+    attempt_opts = []
+
     if firefox_cookie_available():
-        ydl_opts["cookiesfrombrowser"] = ("firefox",)
-    elif find_cookies_txt():
-        ydl_opts["cookiefile"] = str(BASE_DIR / "cookies.txt")
+        attempt_opts.append({**ydl_opts, "cookiesfrombrowser": ("firefox",)})
 
-    try:
-        with YoutubeDL(ydl_opts) as ydl:
-            ydl.extract_info(entry.webpage_url, download=True)
+    if find_cookies_txt():
+        attempt_opts.append({**ydl_opts, "cookiefile": str(BASE_DIR / "cookies.txt")})
 
-        if out_path.exists():
-            entry.downloaded = 1
-            entry.downloaded_at = datetime.now().isoformat(timespec="seconds")
-            entry.file_path = str(out_path)
-            entry.download_error = None
-            return entry
+    attempt_opts.append(ydl_opts)
 
-        # ffmpeg did not create MP3
-        entry.downloaded = 0
-        entry.download_error = "mp3 not created"
-        print(f"{entry.webpage_url} download failed: mp3 not created.")
-        return entry
-    except Exception as ex:
-        entry.downloaded = 0
-        entry.download_error = f"{type(ex).__name__}: {ex}"
-        print(f"{entry.webpage_url} download failed. {ex}")
-        return entry
+    last_error = None
+
+    for opts in attempt_opts:
+        try:
+            with YoutubeDL(opts) as ydl:
+                ydl.extract_info(entry.webpage_url, download=True)
+            if out_path.exists():
+                entry.downloaded = 1
+                entry.downloaded_at = datetime.now().isoformat(timespec="seconds")
+                entry.file_path = str(out_path)
+                entry.download_error = None
+                return entry
+
+            # ffmpeg did not create MP3
+            last_error = "mp3 not created"
+
+        except Exception as e:
+            last_error = f"{type(e).__name__}: {e}"
+            print(e)
+
+    entry.downloaded = 0
+    entry.download_error = last_error or "download failed"
+    print(f"{entry.webpage_url} download failed: {entry.download_error}")
+    return entry
 
 def import_external_entries(session):
     # Scan AUDIO_DIR for audio files not in DB and insert them for transcription.
