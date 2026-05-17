@@ -22,7 +22,6 @@ TEMPORARY_DIR = DATA_DIR / "temporary"
 REPORT_DIR = DATA_DIR / "reports"
 PENDING_FILE = DATA_DIR / ".pending.json"
 COOKIES_TXT = BASE_DIR / "cookies.txt"
-DD_COOKIES_JSON = BASE_DIR / "douyin-downloader" / ".cookies.json"
 CONFIG_JSON = BASE_DIR / "backend" / "data" / "config.json"
 DB_URL = f"sqlite:///{(DATA_DIR / 'db.sqlite3').as_posix()}"  # SQLite
 
@@ -111,6 +110,8 @@ model_para = {
         "summarize": load_prompt("summarize"),
         "outline_trace": load_prompt("outline_trace"),
         "brief": load_prompt("brief"),
+        "headline": load_prompt("headline"),
+        "recommend": load_prompt("recommend"),
         "additional": "",
     },
     "temperature": 0.1,

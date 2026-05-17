@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
+import json
 import os
 import sqlite3
 import sys
@@ -135,7 +136,8 @@ def get_reports(limit: int = 200):
         )
         for r in cur.fetchall():
             video_id = (r["video_id"] or "").strip()
-            report_path = OUTPUT_DIR / video_id / "report.txt"
+            report_path = OUTPUT_DIR / video_id / "report.json"
+            report_data = json.loads(report_path.read_text(encoding="utf-8")) if video_id and report_path.exists() else {}
             rows.append({
                 "id": r["id"],
                 "video_id": video_id,
@@ -144,7 +146,8 @@ def get_reports(limit: int = 200):
                 "webpage_url": r["webpage_url"] or "",
                 "downloaded_at": r["downloaded_at"] or "",
                 "pushed": int(r["pushed"] or 0),
-                "report_exists": bool(video_id and report_path.exists()),
+                "report_exists": bool(report_data),
+                "headline": report_data.get("headline", ""),
             })
     finally:
         conn.close()
@@ -157,10 +160,13 @@ def get_report_detail(video_id: str):
     v = (video_id or "").strip()
     if not v:
         raise HTTPException(status_code=400, detail="invalid video_id")
-    report_path = OUTPUT_DIR / v / "report.txt"
+    report_path = OUTPUT_DIR / v / "report.json"
     if not report_path.exists():
-        raise HTTPException(status_code=404, detail="report.txt not found")
+        raise HTTPException(status_code=404, detail="report.json not found")
+    data = json.loads(report_path.read_text(encoding="utf-8"))
     return {
         "video_id": v,
-        "content": report_path.read_text(encoding="utf-8"),
+        "content": data.get("content", ""),
+        "headline": data.get("headline", ""),
+        "recommend": data.get("recommend", ""),
     }

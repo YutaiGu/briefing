@@ -149,6 +149,8 @@ def Text_Processing(payload):
         "history": WORK_DIR / "history.txt",
         "outline": WORK_DIR / "outline.txt",
         "brief": WORK_DIR / "brief.txt",
+        "headline": WORK_DIR / "headline.txt",
+        "recommend": WORK_DIR / "recommend.txt",
     }
     summarize_model = api_model["summarize_model"]
     model_name = model_info[summarize_model]["model"]
@@ -203,11 +205,44 @@ def Text_Processing(payload):
 
     ## step3: Brief
     print(f"[Brief] {file_name}:")
-    brief_text, brief_history = summarizer_request_gpt(
-        outline_text,
-        "brief",
-        api_model["summarize_model"],
-    )
-    paths["brief"].write_text(brief_text, encoding="utf-8")
+    if paths["brief"].exists():
+        with open(paths["brief"], "r", encoding="utf-8") as f:
+            brief_text = f.read()
+            print("brief.txt already exists.")
+    else:
+        brief_text, _ = summarizer_request_gpt(
+            outline_text,
+            "brief",
+            api_model["summarize_model"],
+        )
+        paths["brief"].write_text(brief_text, encoding="utf-8")
+
+    ## step4: Headline
+    print(f"[Headline] {file_name}:")
+    if paths["headline"].exists():
+        with open(paths["headline"], "r", encoding="utf-8") as f:
+            headline_text = f.read()
+            print("headline.txt already exists.")
+    else:
+        headline_text, _ = summarizer_request_gpt(
+            brief_text,
+            "headline",
+            api_model["summarize_model"],
+        )
+        paths["headline"].write_text(headline_text, encoding="utf-8")
+
+    ## step5: Recommend
+    print(f"[Recommend] {file_name}:")
+    if paths["recommend"].exists():
+        with open(paths["recommend"], "r", encoding="utf-8") as f:
+            recommend_text = f.read()
+            print("recommend.txt already exists.")
+    else:
+        recommend_text, _ = summarizer_request_gpt(
+            brief_text,
+            "recommend",
+            api_model["summarize_model"],
+        )
+        paths["recommend"].write_text(recommend_text, encoding="utf-8")
 
     return payload

@@ -22,9 +22,15 @@
     .report-group { background: #ffffff; border: 1px solid #dbe4f0; border-radius: 12px; padding: 12px; box-shadow: 0 4px 14px rgba(15,23,42,0.06); }
     .report-group-head { font-size: 13px; color: #1f2937; margin-bottom: 10px; padding: 8px 10px; border-left: 4px solid #0ea5e9; background: #f0f9ff; border-radius: 8px; font-weight: 700; }
     .report-group-items { display: grid; gap: 8px; }
-    .report-local-items { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
-    .report-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; }
+    .report-local-items { display: grid; gap: 8px; }
+    .report-item { padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; display: flex; flex-direction: column; gap: 0; }
+    .report-card-head { display: flex; flex-direction: column; gap: 3px; }
+    .report-headline { font-weight: 700; color: #0f172a; font-size: 14px; line-height: 1.5; }
     .report-title { font-weight: 600; color: #0f172a; }
+    .report-subtitle { font-size: 12px; color: #64748b; }
+    .report-footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+    .report-expand { border-top: 1px solid #e2e8f0; margin-top: 10px; padding-top: 10px; }
+    .recommend-block { padding: 10px 14px; border-left: 3px solid #0ea5e9; background: #f0f9ff; border-radius: 0 6px 6px 0; color: #334155; font-size: 13px; line-height: 1.6; }
     .report-meta { font-size: 12px; color: #64748b; }
     .report-open { border: 1px solid #bfdbfe; background: #eff6ff; color: #1e3a8a; padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; }
     .report-wrap { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; }
@@ -173,8 +179,10 @@
     const reportModalClose = document.getElementById("report-modal-close");
     let reportTitleMap = {};
     let isRunning = false;
-    let startupDoneIds = null; // null = first fetch not yet done
-    const newIds = new Set();  // video_ids that became done during this session
+    let startupDoneIds = null;
+    const newIds = new Set();
+    const reportCache = {};
+    let lastReportSig = "";
 
     async function fetchSchema() {
       const res = await fetch("/api/schema");
@@ -455,20 +463,29 @@
       const groups = new Map();
       const localItems = [];
       const renderItem = (item) => {
+        const headlineMd = renderMarkdown((item.headline || "").trim());
         const clean = cleanTitle(item.title || item.video_id || "(no title)");
         const title = escapeHtml(clean);
         const date = escapeHtml(formatDownloadedAt(item.downloaded_at));
         const canOpen = !!item.report_exists;
+        const vid = escapeHtml(item.video_id || "");
         if (item.video_id) reportTitleMap[item.video_id] = clean;
         const isNew = newIds.has(item.video_id);
         return `
-          <div class="report-item${isNew ? " is-new" : ""}">
-            <div>
-              <div class="report-title">${title}</div>
-              <div class="report-meta">${date}</div>
-              ${statusHtml(item)}
+          <div class="report-item${isNew ? " is-new" : ""}" data-vid="${vid}">
+            <div class="report-card-head">
+              ${headlineMd ? `<div class="report-headline md">${headlineMd}</div>` : ""}
+              <div class="${headlineMd ? "report-subtitle" : "report-title"}">${title}</div>
+              <div class="report-footer">
+                <span class="report-meta">${date}</span>
+                ${statusHtml(item)}
+                <span style="margin-left:auto;display:flex;gap:6px;">
+                  ${headlineMd ? `<button class="report-open btn-toggle" data-vid="${vid}">Brief ▾</button>` : ""}
+                  ${canOpen ? `<button class="report-open btn-report" data-vid="${vid}">Report</button>` : ""}
+                </span>
+              </div>
             </div>
-            <button class="report-open" data-video-id="${escapeHtml(item.video_id || "")}" ${canOpen ? "" : "disabled"}>${canOpen ? "View MD" : "No report"}</button>
+            <div class="report-expand recommend-expand" hidden></div>
           </div>
         `;
       };
@@ -510,39 +527,39 @@
         const res = await fetch("/api/reports?limit=300");
         const data = await res.json();
         const items = data.items || [];
+        const sig = JSON.stringify(items.map(i => `${i.video_id}:${i.pushed}:${i.headline}`));
         if (startupDoneIds === null) {
-          // First fetch: snapshot all already-done items — they get "done", not "NEW"
           startupDoneIds = new Set(items.filter(i => i.pushed === 1).map(i => i.video_id));
-        } else {
-          // Subsequent fetches: anything newly pushed that wasn't done at startup → NEW
-          items.forEach(item => {
-            if (item.pushed === 1 && !startupDoneIds.has(item.video_id)) {
-              newIds.add(item.video_id);
-            }
-          });
+          lastReportSig = sig;
+          renderReports(items);
+          return;
         }
-        renderReports(items);
+        let hasNew = false;
+        items.forEach(item => {
+          if (item.pushed === 1 && !startupDoneIds.has(item.video_id)) {
+            newIds.add(item.video_id);
+            hasNew = true;
+          }
+        });
+        if (sig !== lastReportSig || hasNew) {
+          lastReportSig = sig;
+          renderReports(items);
+        }
       } catch (_) {
         reportbox.innerHTML = `<div class="report-meta">Report list load failed.</div>`;
       }
     }
 
-    async function openReport(videoId) {
-      if (!videoId) return;
-      newIds.delete(videoId);
-      const title = reportTitleMap[videoId] || videoId;
-      try {
-        const res = await fetch(`/api/report/${encodeURIComponent(videoId)}`);
-        if (!res.ok) throw new Error("not found");
-        const data = await res.json();
-        reportModalTitle.textContent = title;
-        reportModalBody.innerHTML = renderMarkdown(data.content || "");
-        reportModal.classList.add("show");
-      } catch (_) {
-        reportModalTitle.textContent = title;
-        reportModalBody.textContent = "report.txt not found.";
-        reportModal.classList.add("show");
+    async function loadReport(vid) {
+      if (!reportCache[vid]) {
+        try {
+          const res = await fetch(`/api/report/${encodeURIComponent(vid)}`);
+          reportCache[vid] = res.ok ? await res.json() : {};
+        } catch (_) {
+          reportCache[vid] = {};
+        }
       }
+      return reportCache[vid];
     }
 
     // intervals
@@ -556,16 +573,43 @@
       skipFirstLog = true;
     }
 
-    reportbox.addEventListener("click", (e) => {
-      const btn = e.target.closest(".report-open");
-      if (!btn || btn.disabled) return;
-      openReport(btn.dataset.videoId || "");
+    reportbox.addEventListener("click", async (e) => {
+      // Brief inline toggle
+      const toggleBtn = e.target.closest(".btn-toggle");
+      if (toggleBtn) {
+        const vid = toggleBtn.dataset.vid;
+        const card = reportbox.querySelector(`.report-item[data-vid="${CSS.escape(vid)}"]`);
+        if (!card) return;
+        const expandDiv = card.querySelector(".recommend-expand");
+        const isHidden = expandDiv.hidden;
+        if (isHidden && !expandDiv.dataset.loaded) {
+          const prev = toggleBtn.textContent;
+          toggleBtn.textContent = "Loading…";
+          const data = await loadReport(vid);
+          expandDiv.innerHTML = `<div class="recommend-block md">${renderMarkdown(data.recommend || "")}</div>`;
+          expandDiv.dataset.loaded = "1";
+          toggleBtn.textContent = prev;
+        }
+        expandDiv.hidden = !isHidden;
+        toggleBtn.textContent = `Brief ${isHidden ? "▴" : "▾"}`;
+        return;
+      }
+
+      // Report modal
+      const reportBtn = e.target.closest(".btn-report");
+      if (reportBtn) {
+        const vid = reportBtn.dataset.vid;
+        newIds.delete(vid);
+        reportModalTitle.textContent = reportTitleMap[vid] || vid;
+        reportModalBody.innerHTML = "Loading…";
+        reportModal.classList.add("show");
+        const data = await loadReport(vid);
+        reportModalBody.innerHTML = renderMarkdown(data.content || "");
+      }
     });
 
     reportModalClose.onclick = () => reportModal.classList.remove("show");
-    reportModal.onclick = (e) => {
-      if (e.target === reportModal) reportModal.classList.remove("show");
-    };
+    reportModal.onclick = (e) => { if (e.target === reportModal) reportModal.classList.remove("show"); };
 
     (async () => {
       logbox.textContent = "";

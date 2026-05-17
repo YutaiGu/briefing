@@ -1,3 +1,4 @@
+import json
 import requests
 from datetime import datetime
 
@@ -35,6 +36,25 @@ def pushto_localfile(message: str) -> None:
         return True
     except Exception:
         return False
+
+def translate_text(input: str, language: str) -> str:
+    if language in ("en", "en-us", "english", "English"):
+        return {
+            "choices": [
+                {
+                    "message": {
+                        "content": input
+                    }
+                }
+            ]
+        }
+    response_json = request_gpt(
+        input,
+        f"You are a translation engine. Your task is to translate the user input into {language}. Output only the translation. Do not add any commentary, prefixes, suffixes, or explanations. Preserve the original formatting exactly. "
+        f"Format the output in Markdown to improve readability. Bold key terms where appropriate.",
+        api_model["translate_model"],
+    )
+    return response_json
 
 def translate_and_compress(input: str, language: str):
     if language not in ("en", "en-us", "english", "English") and COMPRESS_LEVEl != 100:  # translate + compress
@@ -94,23 +114,41 @@ def pusher(session, limit: int) -> None:
             text = brief_path.read_text(encoding="utf-8").strip()
             if not text:
                 continue
-            
+
+            vid_dir = OUTPUT_DIR / str(v.video_id)
+            headline_src = (vid_dir / "headline.txt").read_text(encoding="utf-8").strip() if (vid_dir / "headline.txt").exists() else ""
+            recommend_src = (vid_dir / "recommend.txt").read_text(encoding="utf-8").strip() if (vid_dir / "recommend.txt").exists() else ""
+
+            print(f"[Translating] {v.video_id}")
             try:
-                print(f"[Translating & Compressing] {v.video_id}")
-                text = translate_and_compress(text, READ_LANGUAGE)['choices'][0]['message']['content']
+                content = translate_and_compress(text, READ_LANGUAGE)['choices'][0]['message']['content']
             except Exception:
-                pass
-            
-            # translate if needed
-            parts.append(
-                f"# {upload_date} {source}\n"
-                f"{title}\n"
-                f"{text}"
+                content = text
+
+            headline = ""
+            if headline_src:
+                try:
+                    headline = translate_text(headline_src, READ_LANGUAGE)['choices'][0]['message']['content']
+                except Exception:
+                    headline = headline_src
+
+            recommend = ""
+            if recommend_src:
+                try:
+                    recommend = translate_text(recommend_src, READ_LANGUAGE)['choices'][0]['message']['content']
+                except Exception:
+                    recommend = recommend_src
+
+            (vid_dir / "report.json").write_text(
+                json.dumps({"content": content, "headline": headline, "recommend": recommend}, ensure_ascii=False, indent=2),
+                encoding="utf-8",
             )
 
-            report_path = OUTPUT_DIR / str(v.video_id) / "report.txt"
-            with report_path.open("w", encoding="utf-8") as f:
-                f.write(f"{text}\n")
+            notification = f"# {upload_date} {source}\n{title}\n"
+            if headline or recommend:
+                notification += (f"**{headline}**\n" if headline else "") + (f"> {recommend}\n" if recommend else "") + "\n---\n"
+            notification += content
+            parts.append(notification)
 
         except Exception:
             continue
