@@ -2,8 +2,6 @@ from yt_dlp import YoutubeDL
 from datetime import datetime
 import hashlib
 import json
-import os
-import contextlib
 
 from config import BASE_DIR, AUDIO_DIR, ENTRIES_LIMIT, SOURCE_URLS, UPDATE_LIMIT, PENDING_FILE
 from db import Video, update_entries, init_entries, get_undownloaded, get_entries_by_ids, save_entries
@@ -26,26 +24,6 @@ def downloader(session) -> None:
             update_entries(session, [entry])
         print(f"Download finished: {ok} succeeded, {fail} failed.")
 
-def firefox_cookie_available() -> bool:
-    try:
-        with open(os.devnull, "w") as devnull, \
-            contextlib.redirect_stderr(devnull), \
-            contextlib.redirect_stdout(devnull):
-            with YoutubeDL({
-                "cookiesfrombrowser": ("firefox",),
-                "quiet": True,
-                "skip_download": True,
-            }) as ydl:
-                ydl.cookiejar  # Trigger loading
-        return True
-    except Exception:
-        return False
-
-def find_cookies_txt() -> bool:
-    p = BASE_DIR / "cookies.txt"
-    if p.exists() and p.is_file():
-        return True
-    return False
 
 def make_local_audio_id(filename: str) -> str:
     # 24-char id for external audio files
@@ -88,13 +66,8 @@ def fetch_all_entries(source_url: str) -> list:
         }
 
         attempt_opts = []
-
-        if firefox_cookie_available():
-            attempt_opts.append({**ydl_opts, "cookiesfrombrowser": ("firefox",)})
-
-        if find_cookies_txt():
-            attempt_opts.append({**ydl_opts, "cookiefile": str(BASE_DIR / "cookies.txt")})
-
+        attempt_opts.append({**ydl_opts, "cookiesfrombrowser": ("firefox",)})
+        attempt_opts.append({**ydl_opts, "cookiefile": str(BASE_DIR / "cookies.txt")})
         attempt_opts.append(ydl_opts)
 
         info = None
@@ -189,13 +162,8 @@ def download_entry(entry: Video) -> bool:
     }
 
     attempt_opts = []
-
-    if firefox_cookie_available():
-        attempt_opts.append({**ydl_opts, "cookiesfrombrowser": ("firefox",)})
-
-    if find_cookies_txt():
-        attempt_opts.append({**ydl_opts, "cookiefile": str(BASE_DIR / "cookies.txt")})
-
+    attempt_opts.append({**ydl_opts, "cookiesfrombrowser": ("firefox",)})
+    attempt_opts.append({**ydl_opts, "cookiefile": str(BASE_DIR / "cookies.txt")})
     attempt_opts.append(ydl_opts)
 
     last_error = None
