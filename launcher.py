@@ -35,12 +35,12 @@ def _wait_for_server(port: int, timeout: float = 30.0) -> bool:
     return False
 
 
-def _run_server(port: int) -> None:
+def _run_server(port: int, host: str = "127.0.0.1") -> None:
     """Start uvicorn in the calling thread (blocking call)."""
     import uvicorn
     uvicorn.run(
         "backend.app.main:app",
-        host="127.0.0.1",
+        host=host,
         port=port,
         log_level="warning",
     )
@@ -67,6 +67,11 @@ def main() -> None:
 
     if "--worker" in sys.argv:
         _run_worker()
+        return
+
+    if "--server" in sys.argv:
+        os.environ["AUTO_OPEN_BROWSER"] = "0"
+        _run_server(8000, host="0.0.0.0")
         return
 
     # --- server mode ---
