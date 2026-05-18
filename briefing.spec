@@ -19,6 +19,8 @@ datas = [
     ("data/prompts/inspect.txt",        "data/prompts"),
     ("data/prompts/outline_trace.txt",  "data/prompts"),
     ("data/prompts/summarize.txt",      "data/prompts"),
+    ("data/prompts/headline.txt",       "data/prompts"),
+    ("data/prompts/recommend.txt",      "data/prompts"),
     # ffmpeg binary (read-only, added to PATH at startup via main.py)
     ("data/ffmpeg/ffmpeg.exe",          "data/ffmpeg"),
     # Web UI single-page app
