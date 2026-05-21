@@ -1,10 +1,23 @@
 from yt_dlp import YoutubeDL
 from datetime import datetime
+from http.cookiejar import MozillaCookieJar
 import hashlib
 import json
 
 from config import BASE_DIR, AUDIO_DIR, ENTRIES_LIMIT, SOURCE_URLS, UPDATE_LIMIT, PENDING_FILE
 from db import Video, update_entries, init_entries, get_undownloaded, get_entries_by_ids, save_entries
+
+_cookie_jar = MozillaCookieJar()
+_cookies_txt = BASE_DIR / "cookies.txt"
+if _cookies_txt.exists():
+    try:
+        _cookie_jar.load(str(_cookies_txt), ignore_discard=True, ignore_expires=True)
+    except Exception:
+        pass
+
+def _inject(ydl: YoutubeDL) -> None:
+    for c in _cookie_jar:
+        ydl.cookiejar.set_cookie(c)
 
 def downloader(session) -> None:
     for source_url in SOURCE_URLS:
@@ -65,17 +78,21 @@ def fetch_all_entries(source_url: str) -> list:
             "extract_flat": True,
         }
 
-        attempt_opts = []
-        attempt_opts.append({**ydl_opts, "cookiesfrombrowser": ("firefox",)})
-        attempt_opts.append({**ydl_opts, "cookiefile": str(BASE_DIR / "cookies.txt")})
-        attempt_opts.append({**ydl_opts, "cookiefile": str(BASE_DIR / "cookies.txt"), "extractor_args": {"youtube": {"player_client": ["android"]}}})
-        attempt_opts.append(ydl_opts)
+        _android = {"extractor_args": {"youtube": {"player_client": ["android"]}}}
+        attempts = [
+            ({"cookiesfrombrowser": ("firefox",)}, False),
+            ({},                                   True),
+            (_android,                             True),
+            ({},                                   False),
+        ]
 
         info = None
 
-        for opts in attempt_opts:
+        for extra, inject in attempts:
             try:
-                with YoutubeDL(opts) as ydl:
+                with YoutubeDL({**ydl_opts, **extra}) as ydl:
+                    if inject:
+                        _inject(ydl)
                     info = ydl.extract_info(source_url, download=False)
                 if info:
                     break
@@ -162,17 +179,21 @@ def download_entry(entry: Video) -> bool:
         "outtmpl": outtmpl,
     }
 
-    attempt_opts = []
-    attempt_opts.append({**ydl_opts, "cookiesfrombrowser": ("firefox",)})
-    attempt_opts.append({**ydl_opts, "cookiefile": str(BASE_DIR / "cookies.txt")})
-    attempt_opts.append({**ydl_opts, "cookiefile": str(BASE_DIR / "cookies.txt"), "extractor_args": {"youtube": {"player_client": ["android"]}}})
-    attempt_opts.append(ydl_opts)
+    _android = {"extractor_args": {"youtube": {"player_client": ["android"]}}}
+    attempts = [
+        ({"cookiesfrombrowser": ("firefox",)}, False),
+        ({},                                   True),
+        (_android,                             True),
+        ({},                                   False),
+    ]
 
     last_error = None
 
-    for opts in attempt_opts:
+    for extra, inject in attempts:
         try:
-            with YoutubeDL(opts) as ydl:
+            with YoutubeDL({**ydl_opts, **extra}) as ydl:
+                if inject:
+                    _inject(ydl)
                 ydl.extract_info(entry.webpage_url, download=True)
             if out_path.exists():
                 entry.downloaded = 1
