@@ -68,6 +68,7 @@ def fetch_all_entries(source_url: str) -> list:
         attempt_opts = []
         attempt_opts.append({**ydl_opts, "cookiesfrombrowser": ("firefox",)})
         attempt_opts.append({**ydl_opts, "cookiefile": str(BASE_DIR / "cookies.txt")})
+        attempt_opts.append({**ydl_opts, "cookiefile": str(BASE_DIR / "cookies.txt"), "extractor_args": {"youtube": {"player_client": ["android"]}}})
         attempt_opts.append(ydl_opts)
 
         info = None
@@ -164,6 +165,7 @@ def download_entry(entry: Video) -> bool:
     attempt_opts = []
     attempt_opts.append({**ydl_opts, "cookiesfrombrowser": ("firefox",)})
     attempt_opts.append({**ydl_opts, "cookiefile": str(BASE_DIR / "cookies.txt")})
+    attempt_opts.append({**ydl_opts, "cookiefile": str(BASE_DIR / "cookies.txt"), "extractor_args": {"youtube": {"player_client": ["android"]}}})
     attempt_opts.append(ydl_opts)
 
     last_error = None

@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from config import DOWNLOAD_INTERVAL, PROCESS_INTERVAL, PUSHER_LIMIT, PUSHER_INTERVAL
 from db import engine, clean_all, init_db, clean_entries
+from cookies import create_cookies_txt
 from downloader import downloader, import_external_entries
 from transcriber import transcriber, check_whisper_model
 from summarizer import summarizer
@@ -71,6 +72,10 @@ def main():
     load_config()
     init_db()
     check_whisper_model()
+    try:
+        create_cookies_txt()
+    except Exception:
+        pass
     run()
 
 if __name__ == "__main__":
