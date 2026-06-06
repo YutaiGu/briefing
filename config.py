@@ -50,11 +50,11 @@ SOURCE_URLS = [str(x).strip() for x in _cfg.get("SOURCE_URLS", []) if str(x).str
 
 NTFY_SERVER = _cfg.get("NTFY_SERVER") or None
 
-# configuration — all secrets come from config.json
+# configuration — all secrets come from config.json.
+# Not required at import time: the download/cookie path doesn't use the LLM API.
+# Consumers that need it (summarizer/pusher) should validate api_info when used.
 _api_key = (_cfg.get("API_KEY") or "").strip()
 _api_url = (_cfg.get("API_URL") or "").strip()
-if not _api_key or not _api_url:
-    raise RuntimeError("API_KEY and API_URL must be set in the Secrets panel")
 api_info = {
     "api_key": _api_key,
     "url_redirect": _api_url,

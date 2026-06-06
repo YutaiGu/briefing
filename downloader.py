@@ -6,6 +6,13 @@ import json
 
 from config import BASE_DIR, AUDIO_DIR, ENTRIES_LIMIT, SOURCE_URLS, UPDATE_LIMIT, PENDING_FILE
 from db import Video, update_entries, init_entries, get_undownloaded, get_entries_by_ids, save_entries
+import douyin_downloader
+
+# ENTRIES_LIMIT is the yt-dlp "1-x" string; Douyin needs the plain integer cap.
+try:
+    _ENTRIES_LIMIT_INT = int(str(ENTRIES_LIMIT).split("-")[-1])
+except Exception:
+    _ENTRIES_LIMIT_INT = 10
 
 _cookie_jar = MozillaCookieJar()
 _cookies_txt = BASE_DIR / "cookies.txt"
@@ -19,7 +26,24 @@ def _inject(ydl: YoutubeDL) -> None:
     for c in _cookie_jar:
         ydl.cookiejar.set_cookie(c)
 
+def _refresh_cookies() -> None:
+    global _cookie_jar
+    try:
+        from cookies import create_cookies_txt
+        create_cookies_txt()
+    except Exception as e:
+        print(f"[cookies] refresh failed: {type(e).__name__}: {e}")
+
+    jar = MozillaCookieJar()
+    if _cookies_txt.exists():
+        try:
+            jar.load(str(_cookies_txt), ignore_discard=True, ignore_expires=True)
+        except Exception:
+            pass
+    _cookie_jar = jar
+
 def downloader(session) -> None:
+    _refresh_cookies()
     for source_url in SOURCE_URLS:
         entries = fetch_all_entries(source_url)
         n = init_entries(session, entries)
@@ -68,6 +92,12 @@ def fetch_all_entries(source_url: str) -> list:
         pushed            Not set here
         video_id          Guaranteed  <-
     '''
+    # Douyin source: use f2 (one request), which also caches the direct URLs.
+    if douyin_downloader.is_douyin(source_url):
+        entries = douyin_downloader.fetch_homepage_entries(source_url, _ENTRIES_LIMIT_INT)
+        entries.reverse()  # match the yt-dlp path: old -> new
+        return entries
+
     try:
         ydl_opts = {
             "skip_download": True,
@@ -162,6 +192,21 @@ def download_entry(entry: Video) -> bool:
         pushed            Exist
         video_id          Exist
     '''
+    # Douyin source: prefer the cached direct URL (0 API calls); re-resolve on miss.
+    if douyin_downloader.is_douyin(entry.source) or douyin_downloader.is_douyin(entry.webpage_url):
+        saved = douyin_downloader.download_to(
+            entry.webpage_url, AUDIO_DIR / entry.video_id, entry.video_id
+        )
+        if saved:
+            entry.downloaded = 1
+            entry.downloaded_at = datetime.now().isoformat(timespec="seconds")
+            entry.file_path = str(saved)
+            entry.download_error = None
+        else:
+            entry.downloaded = 0
+            entry.download_error = "douyin download failed"
+        return entry
+
     outtmpl = str(AUDIO_DIR / f"{entry.video_id}.%(ext)s")
     out_path = AUDIO_DIR / f"{entry.video_id}.mp3"
 

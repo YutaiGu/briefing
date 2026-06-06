@@ -60,8 +60,8 @@ def load_whisper_model(device: str = "cpu", compute_type: str = "int8") -> None:
         print(f"Failed to load model {model_name}: {e}")
         raise
 
-def Clean_Files(filename, temporary_dir):
-    p = Path(temporary_dir) / filename
+def Clean_Files(temporary_dir):
+    p = Path(temporary_dir)
     if p.exists():
         shutil.rmtree(p)
 
@@ -173,7 +173,7 @@ def Video_Processing(payload):
 
     print(f"[WHISPER DONE] {filename}")
 
-    Clean_Files(filename, temporary_dir)
+    Clean_Files(temporary_dir)
     print(f"[CLEAN DONE] {filename}")
 
     return payload
