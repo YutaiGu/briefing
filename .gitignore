@@ -1,34 +1,38 @@
 *
 !.gitignore
-!requirements.txt
-!*.py
-!images/
-!images/**
 !README.md
 !README_CN.md
-
-# allow traversal
-!backend/
-!backend/app/
-!backend/static/
-!backend/app/data/
-
-# allow backend files
-!backend/app/*.py
-!backend/static/**
-
-# allow traversal
-!data/
-!data/prompts/
-!data/ffmpeg/
-
-# allow data resources
-!data/prompts/**
-!data/ffmpeg/**
-
-# allow build system
+!requirements.txt
+!pyproject.toml
+!launcher.py
 !briefing.spec
 !build.bat
+
+# python sources
+!*.py
+
+# source package tree
+!src/
+!src/briefing/
+!src/briefing/downloaders/
+!src/briefing/summarizer_agent/
+!src/briefing/summarizer_agent/prompts/
+!src/briefing/summarizer_agent/prompts/*.txt
+!src/briefing/web/
+!src/briefing/web/app/
+!src/briefing/web/static/
+!src/briefing/web/static/**
+
+# bundled assets
+!assets/
+!assets/ffmpeg/
+!assets/ffmpeg/**
+
+# images
+!images/
+!images/**
+
+# build system
 !hooks/
 !hooks/*.py
 !.github/

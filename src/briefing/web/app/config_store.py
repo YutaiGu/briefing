@@ -1,14 +1,7 @@
-from pathlib import Path
 import json
-import sys
 from .config_schema import SCHEMA, validate_and_merge
+from briefing.config import DATA_DIR, CONFIG_JSON as CONFIG_PATH
 
-# Frozen-aware: config.json lives in backend/data/ alongside the exe.
-if getattr(sys, 'frozen', False):
-    DATA_DIR = Path(sys.executable).resolve().parent / "backend" / "data"
-else:
-    DATA_DIR = Path(__file__).resolve().parent.parent / "data"
-CONFIG_PATH = DATA_DIR / "config.json"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # Eagerly create config.json with defaults on first run, before any API call.

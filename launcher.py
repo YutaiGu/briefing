@@ -15,6 +15,12 @@ import sys
 import threading
 import time
 
+# In dev (not frozen), make the src-layout package importable without install.
+if not getattr(sys, "frozen", False):
+    _SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
+    if _SRC not in sys.path:
+        sys.path.insert(0, _SRC)
+
 
 def _find_free_port() -> int:
     """Ask the OS for an available port by binding to port 0."""
@@ -39,7 +45,7 @@ def _run_server(port: int, host: str = "127.0.0.1") -> None:
     """Start uvicorn in the calling thread (blocking call)."""
     import uvicorn
     uvicorn.run(
-        "backend.app.main:app",
+        "briefing.web.app.main:app",
         host=host,
         port=port,
         log_level="warning",
@@ -55,7 +61,7 @@ def _run_worker() -> None:
             pass
     except OSError:
         os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
-    from main import main as worker_main
+    from briefing.worker import main as worker_main
     worker_main()
 
 

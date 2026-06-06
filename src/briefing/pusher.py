@@ -2,9 +2,9 @@ import json
 import requests
 from datetime import datetime
 
-from config import api_model, READ_LANGUAGE, OUTPUT_DIR, NTFY_SERVER, COMPRESS_LEVEl, REPORT_DIR, PUSH_TO
-from db import get_unpushed, update_entries
-from summarizer import request_gpt
+from briefing.config import api_model, READ_LANGUAGE, OUTPUT_DIR, NTFY_SERVER, COMPRESS_LEVEl, REPORT_DIR, PUSH_TO
+from briefing.db import get_unpushed, update_entries
+from briefing.summarizer_agent import request_gpt
 
 def pushto_ntfy(message: str) -> bool:
     if NTFY_SERVER is None:

@@ -14,7 +14,7 @@ from http.cookiejar import MozillaCookieJar
 
 from yt_dlp import YoutubeDL
 
-from config import COOKIES_TXT
+from briefing.config import COOKIES_TXT
 
 # Ordered by how common they are; unknown/uninstalled ones are skipped.
 ALL_BROWSERS = ["safari", "edge", "firefox", "chrome"]

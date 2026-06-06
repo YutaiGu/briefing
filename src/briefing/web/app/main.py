@@ -22,20 +22,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Frozen-aware paths.
-# Static files are bundled read-only assets (from _MEIPASS).
-# DB, output, and main.py are resolved relative to the exe directory.
-if getattr(sys, 'frozen', False):
-    STATIC_DIR  = Path(sys._MEIPASS) / "backend" / "static"
-    _base       = Path(sys.executable).resolve().parent
-else:
-    _backend    = Path(__file__).resolve().parent.parent   # = backend/
-    STATIC_DIR  = _backend / "static"
-    _base       = _backend.parent                          # = project root
+from briefing.config import STATIC_DIR, DB_PATH, OUTPUT_DIR
 
-MAIN_SCRIPT = _base / "main.py"
-DB_PATH     = _base / "data" / "db.sqlite3"
-OUTPUT_DIR  = _base / "data" / "output"
 BROWSER_URL = os.environ.get("RUNNER_URL", "http://localhost:8000/")
 AUTO_OPEN   = os.environ.get("AUTO_OPEN_BROWSER", "1") != "0"
 
@@ -48,7 +36,7 @@ def root_page():
     index_file = STATIC_DIR / "index.html"
     if index_file.exists():
         return FileResponse(index_file)
-    return {"message": "UI not found. Ensure backend/static/index.html exists."}
+    return {"message": "UI not found. Ensure briefing/web/static/index.html exists."}
 
 
 @app.on_event("startup")
@@ -83,7 +71,7 @@ def get_config_schema():
 
 @app.post("/api/run")
 def start_run():
-    pid = runner.start(MAIN_SCRIPT)
+    pid = runner.start()
     if pid is None:
         raise HTTPException(status_code=409, detail="already running")
     return {"pid": pid}

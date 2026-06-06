@@ -26,7 +26,7 @@ from pathlib import Path
 
 import requests
 
-from config import BASE_DIR, AUDIO_DIR, DATA_DIR
+from briefing.config import BASE_DIR, AUDIO_DIR, DATA_DIR
 
 # On-disk cache of fresh direct URLs captured during homepage listing, so the
 # later download phase can reuse them instead of calling the Douyin API again.

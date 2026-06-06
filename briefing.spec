@@ -11,26 +11,27 @@ block_cipher = None
 # whole package (submodules + data + binaries) explicitly.
 _f2_datas, _f2_binaries, _f2_hiddenimports = collect_all("f2")
 
-# venv fix: python3xx.dll lives in the base Python install, not in the venv.
-# PyInstaller only searches sys.executable's directory, so it misses it.
-_py_dll = os.path.join(
-    sys.base_prefix,
+# venv fix: the base Python's DLLs aren't in the venv dir, so PyInstaller misses
+# them. Bundle the ones C-extensions (e.g. pyexpat) need: pythonXY.dll + python3.dll.
+_dll_names = [
     f"python{sys.version_info.major}{sys.version_info.minor}.dll",
-)
-_extra_binaries = [(_py_dll, ".")] if os.path.exists(_py_dll) else []
+    "python3.dll",
+]
+_dll_dirs = [sys.base_prefix, os.path.join(sys.base_prefix, "DLLs")]
+_extra_binaries = []
+for _name in _dll_names:
+    for _d in _dll_dirs:
+        _p = os.path.join(_d, _name)
+        if os.path.exists(_p):
+            _extra_binaries.append((_p, "."))
+            break
 
 datas = [
-    # Prompt templates (read-only, loaded from _MEIPASS via config.py)
-    ("data/prompts/brief.txt",          "data/prompts"),
-    ("data/prompts/inspect.txt",        "data/prompts"),
-    ("data/prompts/outline_trace.txt",  "data/prompts"),
-    ("data/prompts/summarize.txt",      "data/prompts"),
-    ("data/prompts/headline.txt",       "data/prompts"),
-    ("data/prompts/recommend.txt",      "data/prompts"),
-    # ffmpeg binary (read-only, added to PATH at startup via main.py)
-    ("data/ffmpeg/ffmpeg.exe",          "data/ffmpeg"),
-    # Web UI single-page app
-    ("backend/static/index.html",       "backend/static"),
+    (p, "briefing/summarizer_agent/prompts")
+    for p in glob.glob("src/briefing/summarizer_agent/prompts/*.txt")
+] + [
+    ("assets/ffmpeg/ffmpeg.exe",            "assets/ffmpeg"),
+    ("src/briefing/web/static/index.html",  "briefing/web/static"),
 ] + _f2_datas
 
 hiddenimports = [
@@ -84,21 +85,30 @@ hiddenimports = [
     # stdlib / other
     "multiprocessing",
     "requests",
-    # backend app — loaded dynamically via uvicorn string "backend.app.main:app"
-    "backend",
-    "backend.app",
-    "backend.app.main",
-    "backend.app.config_store",
-    "backend.app.config_schema",
-    "backend.app.runner",
-    # douyin path (lazy-imported in douyin_downloader.py)
-    "douyin_downloader",
-    "cookies",
+    # briefing package — web app loaded via uvicorn string "briefing.web.app.main:app"
+    "briefing",
+    "briefing.config",
+    "briefing.db",
+    "briefing.cookies",
+    "briefing.transcriber",
+    "briefing.pusher",
+    "briefing.worker",
+    "briefing.downloaders",
+    "briefing.downloaders.downloader",
+    "briefing.downloaders.douyin_downloader",
+    "briefing.summarizer_agent",
+    "briefing.summarizer_agent.pipeline",
+    "briefing.web",
+    "briefing.web.app",
+    "briefing.web.app.main",
+    "briefing.web.app.config_store",
+    "briefing.web.app.config_schema",
+    "briefing.web.app.runner",
 ] + _f2_hiddenimports
 
 a = Analysis(
     ["launcher.py"],
-    pathex=["."],
+    pathex=["src", "."],
     binaries=_extra_binaries + _f2_binaries,
     datas=datas,
     hiddenimports=hiddenimports,

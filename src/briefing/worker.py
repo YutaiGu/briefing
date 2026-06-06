@@ -1,38 +1,26 @@
-from pathlib import Path
-import json
 import os
-import sys
 
-# Frozen-aware paths.
-# ffmpeg.exe is a bundled read-only asset extracted to _MEIPASS.
-# config.json is user-writable and lives next to the exe.
-if getattr(sys, 'frozen', False):
-    _base   = Path(sys.executable).resolve().parent
-    _bundle = Path(sys._MEIPASS)
-else:
-    _base   = Path(__file__).parent
-    _bundle = _base
+from briefing.config import FFMPEG_DIR, require_config
 
-CONFIG_PATH = _base / "backend" / "data" / "config.json"
-FFMPEG_DIR  = _bundle / "data" / "ffmpeg"
 os.environ["PATH"] = str(FFMPEG_DIR) + os.pathsep + os.environ.get("PATH", "")
 
 import time
 from sqlalchemy.orm import Session
 
-from config import DOWNLOAD_INTERVAL, PROCESS_INTERVAL, PUSHER_LIMIT, PUSHER_INTERVAL
-from db import engine, clean_all, init_db, clean_entries
-from downloader import downloader, import_external_entries
-from transcriber import transcriber, check_whisper_model
-from summarizer import summarizer
-from pusher import pusher
+from briefing.config import DOWNLOAD_INTERVAL, PROCESS_INTERVAL, PUSHER_LIMIT, PUSHER_INTERVAL
+from briefing.db import engine, clean_all, init_db, clean_entries
+from briefing.downloaders.downloader import downloader, import_external_entries
+from briefing.transcriber import transcriber, check_whisper_model
+from briefing.summarizer_agent import summarizer
+from briefing.pusher import pusher
+
 
 def run() -> None:
     download_timer = 0
     process_timer = 0
     pusher_timer = 0
     print("START")
-    
+
     while True:
         now = time.time()
 
@@ -51,7 +39,7 @@ def run() -> None:
                 clean_all(session)
                 process_timer = now
                 time.sleep(10)
-            
+
             # ---- pusher ----
             if now - pusher_timer >= PUSHER_INTERVAL:
                 pusher(session, PUSHER_LIMIT)
@@ -59,19 +47,13 @@ def run() -> None:
                 pusher_timer = now
                 time.sleep(10)
 
-def load_config():
-    if not CONFIG_PATH.exists():
-        raise FileNotFoundError(
-            f"Config not found at {CONFIG_PATH}. Start the API once to generate defaults."
-        )
-    with CONFIG_PATH.open("r", encoding="utf-8") as f:
-        return json.load(f)
 
 def main():
-    load_config()
+    require_config()
     init_db()
     check_whisper_model()
     run()
+
 
 if __name__ == "__main__":
     main()

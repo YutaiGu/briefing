@@ -5,11 +5,8 @@ import os
 from pathlib import Path
 from typing import Optional
 
-# Frozen-aware: logs and pid live in backend/data/ alongside the exe.
-if getattr(sys, 'frozen', False):
-    DATA_DIR = Path(sys.executable).resolve().parent / "backend" / "data"
-else:
-    DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+from briefing.config import DATA_DIR, BASE_DIR
+
 LOG_PATH = DATA_DIR / "run.log"
 PID_PATH = DATA_DIR / "run.pid"
 
@@ -41,18 +38,18 @@ class Runner:
                 PID_PATH.unlink(missing_ok=True)
         return False
 
-    def start(self, main_script: Path) -> Optional[int]:
+    def start(self, main_script: Optional[Path] = None) -> Optional[int]:
         if self.is_running():
             return None
         LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
         log_file = LOG_PATH.open("a", buffering=1, encoding="utf-8")
         if getattr(sys, 'frozen', False):
-            # Re-invoke the frozen exe in worker mode; main.py doesn't exist separately.
+            # Re-invoke the frozen exe in worker mode.
             cmd      = [sys.executable, "--worker"]
             work_dir = Path(sys.executable).resolve().parent
         else:
-            cmd      = [sys.executable, "-u", str(main_script)]
-            work_dir = main_script.parent
+            cmd      = [sys.executable, "-u", "-m", "briefing.worker"]
+            work_dir = BASE_DIR
         proc = subprocess.Popen(
             cmd,
             stdout=log_file,

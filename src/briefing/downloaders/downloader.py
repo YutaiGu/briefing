@@ -4,9 +4,9 @@ from http.cookiejar import MozillaCookieJar
 import hashlib
 import json
 
-from config import BASE_DIR, AUDIO_DIR, ENTRIES_LIMIT, SOURCE_URLS, UPDATE_LIMIT, PENDING_FILE
-from db import Video, update_entries, init_entries, get_undownloaded, get_entries_by_ids, save_entries
-import douyin_downloader
+from briefing.config import AUDIO_DIR, ENTRIES_LIMIT, SOURCE_URLS, UPDATE_LIMIT, PENDING_FILE, COOKIES_TXT
+from briefing.db import Video, update_entries, init_entries, get_undownloaded, get_entries_by_ids, save_entries
+from . import douyin_downloader
 
 # ENTRIES_LIMIT is the yt-dlp "1-x" string; Douyin needs the plain integer cap.
 try:
@@ -15,7 +15,7 @@ except Exception:
     _ENTRIES_LIMIT_INT = 10
 
 _cookie_jar = MozillaCookieJar()
-_cookies_txt = BASE_DIR / "cookies.txt"
+_cookies_txt = COOKIES_TXT
 if _cookies_txt.exists():
     try:
         _cookie_jar.load(str(_cookies_txt), ignore_discard=True, ignore_expires=True)
@@ -29,7 +29,7 @@ def _inject(ydl: YoutubeDL) -> None:
 def _refresh_cookies() -> None:
     global _cookie_jar
     try:
-        from cookies import create_cookies_txt
+        from briefing.cookies import create_cookies_txt
         create_cookies_txt()
     except Exception as e:
         print(f"[cookies] refresh failed: {type(e).__name__}: {e}")

@@ -7,7 +7,7 @@ from pathlib import Path
 import shutil
 import os, stat, time
 
-from config import DB_URL, AUDIO_DIR, OUTPUT_DIR, TEMPORARY_DIR, check_config, UPDATE_LIMIT
+from briefing.config import DB_URL, AUDIO_DIR, OUTPUT_DIR, TEMPORARY_DIR, check_config, UPDATE_LIMIT
 
 engine = create_engine(DB_URL, future=True)
 Base = declarative_base()
