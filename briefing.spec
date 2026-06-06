@@ -2,8 +2,14 @@
 # PyInstaller spec file for briefing.exe
 
 import os, sys, glob
+from PyInstaller.utils.hooks import collect_all
 
 block_cipher = None
+
+# F2 (Douyin downloader) loads apps.douyin.* via dynamic string imports and
+# ships its own config/data files. Static analysis misses both, so collect the
+# whole package (submodules + data + binaries) explicitly.
+_f2_datas, _f2_binaries, _f2_hiddenimports = collect_all("f2")
 
 # venv fix: python3xx.dll lives in the base Python install, not in the venv.
 # PyInstaller only searches sys.executable's directory, so it misses it.
@@ -25,7 +31,7 @@ datas = [
     ("data/ffmpeg/ffmpeg.exe",          "data/ffmpeg"),
     # Web UI single-page app
     ("backend/static/index.html",       "backend/static"),
-]
+] + _f2_datas
 
 hiddenimports = [
     # uvicorn — uses string-based dynamic imports that PyInstaller misses
@@ -85,12 +91,15 @@ hiddenimports = [
     "backend.app.config_store",
     "backend.app.config_schema",
     "backend.app.runner",
-]
+    # douyin path (lazy-imported in douyin_downloader.py)
+    "douyin_downloader",
+    "cookies",
+] + _f2_hiddenimports
 
 a = Analysis(
     ["launcher.py"],
     pathex=["."],
-    binaries=_extra_binaries,
+    binaries=_extra_binaries + _f2_binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],

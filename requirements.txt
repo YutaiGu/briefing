@@ -2,6 +2,7 @@ numpy
 requests[socks]
 tiktoken
 yt-dlp
+f2==0.0.1.7
 sqlalchemy
 pyinstaller
 fastapi
