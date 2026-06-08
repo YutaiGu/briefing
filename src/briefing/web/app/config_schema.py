@@ -237,8 +237,7 @@ def _coerce(field: Dict[str, Any], value: Any) -> Any:
     return value
 
 
-def validate_and_merge(data: Dict[str, Any]) -> Dict[str, Any]:
-    # Merge incoming data with defaults, coerce types according to SCHEMA.
+def _merge(data: Dict[str, Any], lenient: bool) -> Dict[str, Any]:
     result = make_default_config()
     for f in SCHEMA:
         name = f.get("key") or f["name"]
@@ -252,7 +251,22 @@ def validate_and_merge(data: Dict[str, Any]) -> Dict[str, Any]:
                 break
         if incoming is None:
             coerced = f.get("default")
+        elif lenient:
+            try:
+                coerced = _coerce(f, incoming)
+            except Exception:
+                coerced = f.get("default")  # one bad field -> just its own default
         else:
             coerced = _coerce(f, incoming)
         _set_path(result, name, coerced)
     return result
+
+
+def validate_and_merge(data: Dict[str, Any]) -> Dict[str, Any]:
+    # Strict: any invalid field raises. Used when saving user input.
+    return _merge(data, lenient=False)
+
+
+def merge_lenient(data: Dict[str, Any]) -> Dict[str, Any]:
+    # Tolerant: an invalid field falls back to its own default. Used when loading.
+    return _merge(data, lenient=True)

@@ -121,9 +121,12 @@ api_model = None
 
 if CONFIG_JSON.exists():
     try:
-        _cfg = json.loads(CONFIG_JSON.read_text(encoding="utf-8"))
+        _raw = json.loads(CONFIG_JSON.read_text(encoding="utf-8"))
     except Exception as e:
         raise RuntimeError(f"Failed to read config.json: {CONFIG_JSON}") from e
+
+    from briefing.web.app.config_schema import merge_lenient
+    _cfg = merge_lenient(_raw)
 
     READ_LANGUAGE = _cfg["READ_LANGUAGE"]
     UPDATE_LIMIT = int(_cfg["UPDATE_LIMIT"])

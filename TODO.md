@@ -1,8 +1,8 @@
 # TODO
 
 Version Compatibility
-- [ ] config.py: load via schema defaults so an old config.json won't crash on upgrade
-- [ ] db.py: Any change won't cause failed
+- [x] config.py: load via schema defaults so an old config.json won't crash on upgrade
+- [x] db.py: Any change won't cause failed
 
 Model Compatibility
 - [ ] model_info: Any model will work with the latest model info
