@@ -31,6 +31,20 @@ PROMPT_DIR = PKG_DIR / "summarizer_agent" / "prompts"
 FFMPEG_DIR = ASSETS_DIR / "ffmpeg"
 STATIC_DIR = PKG_DIR / "web" / "static"
 
+# writable: evolving per-domain/per-stage style preferences
+PREFERENCES_DIR = DATA_DIR / "preferences"
+
+# domains the review stage classifies talks into, with scope notes for the classifier
+DOMAINS = {
+    "finance": "anything related to economy, finance, or money — investing, stocks, ETFs, "
+               "bonds, funds, markets, valuation, company/earnings/industry analysis, "
+               "macro- and micro-economics, monetary and fiscal policy, central banks, "
+               "banking, crypto, trade, business and corporate strategy, real estate, "
+               "personal finance, and any lecture/talk/commentary on these topics. "
+               "Interpret VERY BROADLY: if it touches the economy or money, it is finance.",
+    "other": "anything that is clearly not about economy, finance, or money",
+}
+
 
 def load_prompt(name: str) -> str:
     path = PROMPT_DIR / f"{name}.txt"
@@ -41,11 +55,9 @@ def load_prompt(name: str) -> str:
 
 model_para = {
     "system_content": {
-        "inspect": load_prompt("inspect"),
-        "summarize": load_prompt("summarize"),
-        "outline_trace": load_prompt("outline_trace"),
+        "outline": load_prompt("outline"),
+        "review": load_prompt("review").format(domains="\n".join(f"- {k}: {v}" for k, v in DOMAINS.items())),
         "brief": load_prompt("brief"),
-        "headline": load_prompt("headline"),
         "recommend": load_prompt("recommend"),
         "additional": "",
     },
@@ -132,6 +144,7 @@ if CONFIG_JSON.exists():
         "whisper_model": _cfg["whisper_model"],
         "summarize_model": _cfg["summarize_model"],
         "translate_model": _cfg["translate_model"],
+        "review_model": _cfg["review_model"],
     }
     CONFIG_LOADED = True
 

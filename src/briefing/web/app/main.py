@@ -23,6 +23,8 @@ app.add_middleware(
 )
 
 from briefing.config import STATIC_DIR, DB_PATH, OUTPUT_DIR
+from sqlalchemy.orm import Session
+from briefing.db import engine, save_feedback, get_feedback_map, Video
 
 BROWSER_URL = os.environ.get("RUNNER_URL", "http://localhost:8000/")
 AUTO_OPEN   = os.environ.get("AUTO_OPEN_BROWSER", "1") != "0"
@@ -152,9 +154,29 @@ def get_report_detail(video_id: str):
     if not report_path.exists():
         raise HTTPException(status_code=404, detail="report.json not found")
     data = json.loads(report_path.read_text(encoding="utf-8"))
+    with Session(engine, future=True) as session:
+        feedback = get_feedback_map(session, v)
     return {
         "video_id": v,
         "content": data.get("content", ""),
         "headline": data.get("headline", ""),
         "recommend": data.get("recommend", ""),
+        "feedback": feedback,
     }
+
+
+@app.post("/api/feedback")
+def post_feedback(body: dict):
+    video_id = (body.get("video_id") or "").strip()
+    stage = (body.get("stage") or "").strip()
+    opinion = (body.get("opinion") or "").strip()
+    if not video_id or not opinion or stage not in ("headline", "brief", "recommend"):
+        raise HTTPException(status_code=400, detail="video_id, valid stage, and non-empty opinion required")
+    # store the English generated text (internal flow is English), not the translated display
+    src = OUTPUT_DIR / video_id / f"{stage}.txt"
+    output = src.read_text(encoding="utf-8").strip() if src.exists() else ""
+    with Session(engine, future=True) as session:
+        v = session.query(Video).filter(Video.video_id == video_id).first()
+        domain = (v.domain if v and v.domain else None) or "other"
+        save_feedback(session, video_id, domain, stage, output, opinion)
+    return {"ok": True, "domain": domain}

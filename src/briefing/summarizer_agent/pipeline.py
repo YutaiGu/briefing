@@ -18,6 +18,13 @@ def one_summarizer(payload):
         return None
 
 def summarizer(session) -> None:
+    # fold any new user feedback into the per-domain style preferences first
+    try:
+        from briefing.summarizer_agent import evolve
+        evolve.evolve(session, api_model["summarize_model"])
+    except Exception as e:
+        print(f"[evolve pass skipped: {e}]")
+
     todo = get_unsummarized(session, SUMMARIZER_LIMIT)
     if not todo:
         return
@@ -136,6 +143,43 @@ def summarizer_request_gpt(input, which_system, model):
 
     return response_txt, history
 
+def _subjective(input_text, stage, model, domain):
+    """Generate a subjective stage, injecting that (domain, stage)'s learned preferences."""
+    from briefing.summarizer_agent import evolve
+    system = model_para["system_content"][stage] + model_para["system_content"]["additional"]
+    notes = evolve.load_notes(domain, stage)
+    if notes:
+        system += f"\n\n=== Learned style preferences for {domain} (follow these) ===\n{notes}"
+    resp = request_gpt(input_text, system, model)
+    return resp["choices"][0]["message"]["content"]
+
+def _parse_review(review_out, original_outline):
+    """Parse review output 'DOMAIN: x\\n---\\n<corrected outline>' -> (domain, outline)."""
+    from briefing.config import DOMAINS
+    domain, outline = "other", original_outline
+    if review_out:
+        first = review_out.splitlines()[0] if review_out.splitlines() else ""
+        if first.strip().upper().startswith("DOMAIN:"):
+            d = first.split(":", 1)[1].strip().lower()
+            if d in DOMAINS:
+                domain = d
+        parts = review_out.split("---", 1)
+        if len(parts) == 2 and parts[1].strip():
+            outline = parts[1].strip()
+    return domain, outline
+
+def _split_headline(raw):
+    """Split brief output 'HEADLINE: x\\n---\\n<body>' -> (headline, body)."""
+    headline, body = "", raw
+    if raw:
+        lines = raw.splitlines()
+        first = lines[0] if lines else ""
+        if first.strip().upper().startswith("HEADLINE:"):
+            headline = first.split(":", 1)[1].strip()
+            parts = raw.split("---", 1)
+            body = parts[1].strip() if len(parts) == 2 else "\n".join(lines[1:]).strip()
+    return headline, body
+
 def Text_Processing(payload):
     file_name = Path(payload['file_path']).stem
     if not file_name:
@@ -164,7 +208,7 @@ def Text_Processing(payload):
         encoding = tiktoken.encoding_for_model(model_name)
     except KeyError:
         encoding = tiktoken.get_encoding("cl100k_base")
-    outline_content = model_para["system_content"]["outline_trace"] + model_para["system_content"]["additional"]
+    outline_content = model_para["system_content"]["outline"] + model_para["system_content"]["additional"]
     outline_content_tokens = len(encoding.encode(outline_content))
     max_input_tokens = model_info[summarize_model]["max_input"]
     token_budget = max_input_tokens - outline_content_tokens - 64  # Leave margin
@@ -195,7 +239,7 @@ def Text_Processing(payload):
                 temp_prompt = tag + " segmented input; keep context.\n" + chunk
             resp, _ = summarizer_request_gpt(
                 temp_prompt,
-                "outline_trace",
+                "outline",
                 summarize_model,
             )
             outlines.append((tag + "\n" if tag else "") + resp)
@@ -203,46 +247,35 @@ def Text_Processing(payload):
         outline_text = "\n\n".join(outlines)
         paths["outline"].write_text(outline_text, encoding="utf-8")
 
-    ## step3: Brief
+    ## review: classify domain + fix mangled terms (objective, no evolution)
+    print(f"[Review] {file_name}:")
+    domain = payload.get("domain")
+    if not domain:
+        review_out, _ = summarizer_request_gpt(outline_text, "review", api_model["review_model"])
+        domain, outline_text = _parse_review(review_out, outline_text)
+        payload["domain"] = domain
+        paths["outline"].write_text(outline_text, encoding="utf-8")  # term-corrected
+    print(f"   domain = {domain}")
+
+    ## brief (+ headline) — subjective, domain-aware
     print(f"[Brief] {file_name}:")
-    if paths["brief"].exists():
-        with open(paths["brief"], "r", encoding="utf-8") as f:
-            brief_text = f.read()
-            print("brief.txt already exists.")
+    if paths["brief"].exists() and paths["headline"].exists():
+        brief_text = paths["brief"].read_text(encoding="utf-8")
+        headline_text = paths["headline"].read_text(encoding="utf-8")
+        print("brief.txt already exists.")
     else:
-        brief_text, _ = summarizer_request_gpt(
-            outline_text,
-            "brief",
-            api_model["summarize_model"],
-        )
+        raw = _subjective(outline_text, "brief", summarize_model, domain)
+        headline_text, brief_text = _split_headline(raw)
+        paths["headline"].write_text(headline_text, encoding="utf-8")
         paths["brief"].write_text(brief_text, encoding="utf-8")
 
-    ## step4: Headline
-    print(f"[Headline] {file_name}:")
-    if paths["headline"].exists():
-        with open(paths["headline"], "r", encoding="utf-8") as f:
-            headline_text = f.read()
-            print("headline.txt already exists.")
-    else:
-        headline_text, _ = summarizer_request_gpt(
-            brief_text,
-            "headline",
-            api_model["summarize_model"],
-        )
-        paths["headline"].write_text(headline_text, encoding="utf-8")
-
-    ## step5: Recommend
+    ## recommend — subjective, domain-aware
     print(f"[Recommend] {file_name}:")
     if paths["recommend"].exists():
-        with open(paths["recommend"], "r", encoding="utf-8") as f:
-            recommend_text = f.read()
-            print("recommend.txt already exists.")
+        recommend_text = paths["recommend"].read_text(encoding="utf-8")
+        print("recommend.txt already exists.")
     else:
-        recommend_text, _ = summarizer_request_gpt(
-            brief_text,
-            "recommend",
-            api_model["summarize_model"],
-        )
+        recommend_text = _subjective(brief_text, "recommend", summarize_model, domain)
         paths["recommend"].write_text(recommend_text, encoding="utf-8")
 
     return payload

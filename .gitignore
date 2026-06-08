@@ -2,6 +2,7 @@
 !.gitignore
 !README.md
 !README_CN.md
+!TODO.md
 !requirements.txt
 !pyproject.toml
 !launcher.py

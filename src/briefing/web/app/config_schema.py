@@ -123,6 +123,15 @@ SCHEMA: List[Dict[str, Any]] = [
         "cn": "翻译模型",
     },
     {
+        "name": "Review Model",
+        "key": "review_model",
+        "type": "select",
+        "default": "gpt-4o",
+        "choices": ["gpt-4o", "gpt-4o-mini", "gpt-4.1-nano"],
+        "desc": "Review model: domain + term fixing (objective, needs a capable model)",
+        "cn": "审阅模型: 判定领域+修专业名词 (客观,需较强模型)",
+    },
+    {
         "name": "COMPRESS_LEVEl",
         "key": "COMPRESS_LEVEl",
         "type": "select",

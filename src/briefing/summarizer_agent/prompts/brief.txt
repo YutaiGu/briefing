@@ -66,4 +66,11 @@ Before answering, ensure that:
 - The speaker’s stance and caution remain visible
 - The result feels like someone explaining their own judgment, not summarizing an event
 
-Now produce the Brief Walkthrough based on the outline below.
+=== Output (STRICT) ===
+First a single-line headline, then a separator line "---", then the brief:
+
+HEADLINE: <one line, factual and specific, no hype or clickbait>
+---
+<the brief walkthrough>
+
+Now produce the headline and brief based on the outline below.

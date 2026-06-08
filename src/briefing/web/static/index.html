@@ -31,6 +31,12 @@
     .report-footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
     .report-expand { border-top: 1px solid #e2e8f0; margin-top: 10px; padding-top: 10px; }
     .recommend-block { padding: 10px 14px; border-left: 3px solid #0ea5e9; background: #f0f9ff; border-radius: 0 6px 6px 0; color: #334155; font-size: 13px; line-height: 1.6; }
+    .fb { margin: 6px 0 20px; }
+    .fb-input { width: 100%; box-sizing: border-box; font-size: 12px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; resize: vertical; font-family: inherit; }
+    .fb-send { margin-top: 4px; font-size: 12px; padding: 5px 14px; border: none; border-radius: 6px; background: #2563eb; color: #fff; font-weight: 500; cursor: pointer; }
+    .fb-send:hover { background: #1d4ed8; }
+    .fb-status { font-size: 12px; color: #64748b; margin-left: 8px; }
+    .md, .recommend-block, #report-modal-body { user-select: text; }
     .report-meta { font-size: 12px; color: #64748b; }
     .report-open { border: 1px solid #bfdbfe; background: #eff6ff; color: #1e3a8a; padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; }
     .report-wrap { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; }
@@ -182,6 +188,7 @@
     let startupDoneIds = null;
     const newIds = new Set();
     const reportCache = {};
+    const expandedVids = new Set();   // vids whose inline brief is open — render reflects this
     let lastReportSig = "";
 
     async function fetchSchema() {
@@ -471,6 +478,10 @@
         const vid = escapeHtml(item.video_id || "");
         if (item.video_id) reportTitleMap[item.video_id] = clean;
         const isNew = newIds.has(item.video_id);
+        const expanded = expandedVids.has(item.video_id) && reportCache[item.video_id];
+        const expandHtml = expanded
+          ? `<div class="recommend-block md">${renderMarkdown(reportCache[item.video_id].recommend || "")}</div>`
+          : "";
         return `
           <div class="report-item${isNew ? " is-new" : ""}" data-vid="${vid}">
             <div class="report-card-head">
@@ -480,12 +491,12 @@
                 <span class="report-meta">${date}</span>
                 ${statusHtml(item)}
                 <span style="margin-left:auto;display:flex;gap:6px;">
-                  ${headlineMd ? `<button class="report-open btn-toggle" data-vid="${vid}">Brief ▾</button>` : ""}
+                  ${headlineMd ? `<button class="report-open btn-toggle" data-vid="${vid}">Brief ${expanded ? "▴" : "▾"}</button>` : ""}
                   ${canOpen ? `<button class="report-open btn-report" data-vid="${vid}">Report</button>` : ""}
                 </span>
               </div>
             </div>
-            <div class="report-expand recommend-expand" hidden></div>
+            <div class="report-expand recommend-expand"${expanded ? ' data-loaded="1"' : " hidden"}>${expandHtml}</div>
           </div>
         `;
       };
@@ -581,17 +592,22 @@
         const card = reportbox.querySelector(`.report-item[data-vid="${CSS.escape(vid)}"]`);
         if (!card) return;
         const expandDiv = card.querySelector(".recommend-expand");
-        const isHidden = expandDiv.hidden;
-        if (isHidden && !expandDiv.dataset.loaded) {
-          const prev = toggleBtn.textContent;
-          toggleBtn.textContent = "Loading…";
-          const data = await loadReport(vid);
-          expandDiv.innerHTML = `<div class="recommend-block md">${renderMarkdown(data.recommend || "")}</div>`;
-          expandDiv.dataset.loaded = "1";
-          toggleBtn.textContent = prev;
+        const willExpand = expandDiv.hidden;
+        if (willExpand) {
+          if (!expandDiv.dataset.loaded) {
+            const prev = toggleBtn.textContent;
+            toggleBtn.textContent = "Loading…";
+            const data = await loadReport(vid);
+            expandDiv.innerHTML = `<div class="recommend-block md">${renderMarkdown(data.recommend || "")}</div>`;
+            expandDiv.dataset.loaded = "1";
+            toggleBtn.textContent = prev;
+          }
+          expandedVids.add(vid);
+        } else {
+          expandedVids.delete(vid);
         }
-        expandDiv.hidden = !isHidden;
-        toggleBtn.textContent = `Brief ${isHidden ? "▴" : "▾"}`;
+        expandDiv.hidden = !willExpand;
+        toggleBtn.textContent = `Brief ${willExpand ? "▴" : "▾"}`;
         return;
       }
 
@@ -604,12 +620,68 @@
         reportModalBody.innerHTML = "Loading…";
         reportModal.classList.add("show");
         const data = await loadReport(vid);
-        reportModalBody.innerHTML = renderMarkdown(data.content || "");
+        reportModalBody.innerHTML = renderReport(vid, data);
+        wireFeedback(reportModalBody, vid, data);
       }
     });
 
     reportModalClose.onclick = () => reportModal.classList.remove("show");
     reportModal.onclick = (e) => { if (e.target === reportModal) reportModal.classList.remove("show"); };
+
+    // Human-facing labels, shown per READ_LANGUAGE
+    const FB_TXT = {
+      headline:  { en: "Headline",  zh: "标题" },
+      brief:     { en: "Brief",     zh: "简报" },
+      recommend: { en: "Recommend", zh: "推荐" },
+      submit:    { en: "Submit feedback", zh: "提交意见" },
+      ph:        { en: "Feedback (leave empty = fine)", zh: "改进意见（不填=满意）" },
+    };
+    function fbLang() { return (config && config.READ_LANGUAGE === "chinese") ? "zh" : "en"; }
+    function fbt(key) { return FB_TXT[key][fbLang()]; }
+
+    function fbBox(stage, saved) {
+      return `<div class="fb" data-stage="${stage}">
+        <textarea class="fb-input" rows="2" placeholder="${fbt("ph")}">${escapeHtml(saved || "")}</textarea>
+        <div><button class="fb-send" data-stage="${stage}">${fbt("submit")}</button><span class="fb-status"></span></div>
+      </div>`;
+    }
+
+    function renderReport(vid, data) {
+      const fb = data.feedback || {};
+      const h = (data.headline || "").trim();
+      const c = (data.content || "").trim();
+      const r = (data.recommend || "").trim();
+      let html = "";
+      if (h) html += `<h3>${fbt("headline")}</h3><div class="md">${renderMarkdown(h)}</div>` + fbBox("headline", fb.headline);
+      html += `<h3>${fbt("brief")}</h3><div class="md">${renderMarkdown(c)}</div>` + fbBox("brief", fb.brief);
+      if (r) html += `<h3>${fbt("recommend")}</h3><div class="recommend-block md">${renderMarkdown(r)}</div>` + fbBox("recommend", fb.recommend);
+      return html;
+    }
+
+    function wireFeedback(container, vid, data) {
+      container.querySelectorAll(".fb-send").forEach(btn => {
+        btn.onclick = async () => {
+          const box = btn.closest(".fb");
+          const stage = btn.dataset.stage;
+          const opinion = box.querySelector(".fb-input").value.trim();
+          const status = box.querySelector(".fb-status");
+          if (!opinion) { status.textContent = "empty"; return; }
+          status.textContent = "submitting…";
+          try {
+            const res = await fetch("/api/feedback", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ video_id: vid, stage, opinion }),
+            });
+            if (res.ok) {
+              data.feedback = data.feedback || {};
+              data.feedback[stage] = opinion;   // update cached report so reopen prefills
+            }
+            status.textContent = res.ok ? "saved ✓" : "failed";
+          } catch (_) { status.textContent = "failed"; }
+        };
+      });
+    }
 
     (async () => {
       logbox.textContent = "";

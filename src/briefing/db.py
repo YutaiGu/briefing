@@ -39,11 +39,40 @@ class Video(Base):
     summarized = Column(Integer, nullable=False, default=0)     # 0/1
     pushed = Column(Integer, nullable=False, default=0)         # 0/1
     video_id = Column(String)                                   # video filename
+    domain = Column(String)                                     # finance / other (set by review stage)
     __table_args__ = (UniqueConstraint("webpage_url", name="uq_webpage_url"),)
 
+
+class Feedback(Base):
+    __tablename__ = "feedback"
+    video_id = Column(String, primary_key=True)                 # the video this opinion is about
+    stage = Column(String, primary_key=True)                    # headline / brief / recommend
+    domain = Column(String)                                     # which domain's preferences this informs
+    output = Column(String)                                     # the generated text the user critiqued
+    opinion = Column(String)                                    # the user's improvement note
+    applied = Column(Integer, nullable=False, default=0)        # 0/1 distilled into notes yet
+
+
+def _sync_schema() -> None:
+    """Add any model column missing from its existing table, for every table."""
+    insp = inspect(engine)
+    existing = set(insp.get_table_names())
+    for table in Base.metadata.sorted_tables:
+        if table.name not in existing:
+            continue  # create_all already built new tables with the full schema
+        have = {c["name"] for c in insp.get_columns(table.name)}
+        with engine.begin() as conn:
+            for col in table.columns:
+                if col.name not in have:
+                    coltype = col.type.compile(engine.dialect)
+                    conn.exec_driver_sql(
+                        f"ALTER TABLE {table.name} ADD COLUMN {col.name} {coltype}"
+                    )
+
 def init_db() -> None:
-    # Ensure DB file & tables exist.
+    # Ensure DB file & tables exist, and existing tables match the models.
     Base.metadata.create_all(bind=engine)
+    _sync_schema()
 
     ok, missing, errors = check_config()
     if ok:
@@ -345,3 +374,28 @@ def get_entries_by_ids(session, video_ids: list[str]):
         return []
     stmt = select(Video).where(Video.video_id.in_(video_ids))
     return session.execute(stmt).scalars().all()
+
+def save_feedback(session, video_id: str, domain: str, stage: str, output: str, opinion: str) -> None:
+    # one opinion per (video_id, stage): upsert, and reset applied so it re-evolves
+    fb = session.get(Feedback, (video_id, stage))
+    if fb:
+        fb.domain, fb.output, fb.opinion, fb.applied = domain, output, opinion, 0
+    else:
+        session.add(Feedback(video_id=video_id, domain=domain, stage=stage,
+                             output=output, opinion=opinion, applied=0))
+    session.commit()
+
+def get_feedback_map(session, video_id: str) -> dict:
+    rows = session.query(Feedback).filter(Feedback.video_id == video_id).all()
+    return {r.stage: r.opinion for r in rows}
+
+def get_unapplied_feedback(session):
+    return session.query(Feedback).filter(Feedback.applied == 0).all()
+
+def mark_feedback_applied(session, keys) -> None:
+    # keys: iterable of (video_id, stage)
+    for vid, stage in keys:
+        fb = session.get(Feedback, (vid, stage))
+        if fb:
+            fb.applied = 1
+    session.commit()

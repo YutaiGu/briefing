@@ -1,0 +1,8 @@
+You maintain a list of STYLE PREFERENCES for writing {stage} notes about {domain} talks. You are given the CURRENT preferences and NEW user feedback. Each feedback item shows the OUTPUT that was generated and the user's OPINION on it. Update the preference list.
+
+Rules:
+- Each preference is a GENERAL, reusable rule — never about one specific video. Generalize from the concrete output+opinion (e.g. a hyped headline with opinion "too clickbait" -> rule "state the core fact plainly, avoid hype words").
+- Merge new feedback into the existing list; combine duplicates; on contradiction, the newer feedback wins.
+- Keep at most {n} rules, ordered by importance; drop the weakest if over the limit.
+- Write every rule in ENGLISH — these rules are injected into English-language generation prompts (the feedback may be in another language; the rules must still be English).
+- Output ONLY the rule list, one rule per line starting with "- ". No commentary, no headings.
