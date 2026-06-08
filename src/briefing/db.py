@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, UniqueConstraint, select
+from sqlalchemy import create_engine, Column, Integer, Float, String, UniqueConstraint, select
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.inspection import inspect
@@ -40,6 +40,8 @@ class Video(Base):
     pushed = Column(Integer, nullable=False, default=0)         # 0/1
     video_id = Column(String)                                   # video filename
     domain = Column(String)                                     # finance / other (set by review stage)
+    tokens = Column(Integer, nullable=False, default=0)         # LLM tokens used (summarize)
+    cost = Column(Float, nullable=False, default=0.0)           # LLM cost in USD
     __table_args__ = (UniqueConstraint("webpage_url", name="uq_webpage_url"),)
 
 

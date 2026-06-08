@@ -385,7 +385,6 @@ def _stream_to(direct_url: str, out_path_no_ext: Path) -> Path | None:
         return None
 
     if out_path and out_path.exists() and out_path.stat().st_size > 100 * 1024:
-        print(f"[douyin] saved {out_path.name} ({out_path.stat().st_size} bytes)")
         return out_path
 
     print("[douyin] file too small / missing")

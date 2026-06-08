@@ -46,6 +46,22 @@
     .dot-gray { background: #64748b; }
     .dot-red { background: #ef4444; }
     .report-item.is-new { border-color: #fca5a5; background: #fff5f5; box-shadow: 0 0 0 2px rgba(239,68,68,0.14); }
+    .progress-wrap { background: #ffffff; border: 1px solid #dbe4f0; border-radius: 12px; padding: 12px; box-shadow: 0 4px 14px rgba(15,23,42,0.06); }
+    .progress-head { font-size: 13px; font-weight: 700; color: #1f2937; margin-bottom: 10px; }
+    table.progress { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.progress th { text-align: left; color: #64748b; font-weight: 600; padding: 6px 10px; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+    table.progress th.num, table.progress td.num { text-align: right; }
+    table.progress td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; }
+    table.progress td.title { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #0f172a; }
+    .cell { display: inline-flex; align-items: center; gap: 6px; }
+    .cell.done { color: #16a34a; }
+    .cell.pending { color: #94a3b8; }
+    .cell.error { color: #ef4444; }
+    .progress-empty { color: #94a3b8; font-size: 13px; padding: 8px 2px; }
+    table.progress tr.done-row { background: #f0fdf4; }
+    .bar { position: relative; width: 96px; height: 14px; background: #e2e8f0; border-radius: 7px; overflow: hidden; }
+    .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; background: #22c55e; transition: width 0.4s; }
+    .bar-label { position: relative; font-size: 10px; color: #0f172a; line-height: 14px; padding-left: 8px; }
     .spinner { width: 10px; height: 10px; border: 2px solid #f59e0b; border-top-color: transparent; border-radius: 50%; display: inline-block; animation: spin 0.9s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .modal { position: fixed; inset: 0; background: rgba(2,6,23,0.72); display: none; align-items: center; justify-content: center; padding: 24px; z-index: 50; }
@@ -140,6 +156,13 @@
     </section>
 
     <section>
+      <div class="progress-wrap">
+        <div class="progress-head">Processing</div>
+        <div id="progressbox"></div>
+      </div>
+    </section>
+
+    <section>
       <div class="report-wrap">
         <div id="reportbox" class="reportbox"></div>
       </div>
@@ -179,6 +202,8 @@
     const stopBtn = document.getElementById("stop-btn");
     const logbox = document.getElementById("logbox");
     const reportbox = document.getElementById("reportbox");
+    const progressbox = document.getElementById("progressbox");
+    let prevProgress = new Map();  // video_id -> last in-progress row, to keep just-completed visible one cycle
     const reportModal = document.getElementById("report-modal");
     const reportModalTitle = document.getElementById("report-modal-title");
     const reportModalBody = document.getElementById("report-modal-body");
@@ -561,6 +586,69 @@
       }
     }
 
+    function progressCell(state) {
+      const label = state === "done" ? "Done" : state === "error" ? "Error" : "…";
+      return `<span class="cell ${state}">${label}</span>`;
+    }
+
+    function transcribeCell(it) {
+      if (it.transcribe === "pending" && it.transcribe_progress > 0) {
+        const pct = Math.min(99, it.transcribe_progress);
+        return `<div class="bar"><div class="bar-fill" style="width:${pct}%"></div><span class="bar-label">${pct}%</span></div>`;
+      }
+      return progressCell(it.transcribe);
+    }
+
+    function renderProgress(items) {
+      // carry tasks that just left the in-progress set (completed) for one more cycle
+      const currentIds = new Set(items.map(i => i.video_id));
+      const justDone = [];
+      prevProgress.forEach((row, id) => {
+        if (!currentIds.has(id)) {
+          justDone.push({ ...row, download: "done", transcribe: "done", summarize: "done", push: "done", _justDone: true });
+        }
+      });
+      prevProgress = new Map(items.map(i => [i.video_id, i]));
+      const all = items.concat(justDone);
+
+      if (!all.length) {
+        progressbox.innerHTML = `<div class="progress-empty">No tasks in progress.</div>`;
+        return;
+      }
+      const rows = all.map(it => {
+        const id = it.video_id || "";
+        const shortId = id.length > 12 ? id.slice(0, 12) + "…" : id;
+        const cost = it.cost ? `$${Number(it.cost).toFixed(4)}` : "";
+        const tokens = it.tokens ? it.tokens.toLocaleString() : "";
+        return `<tr class="${it._justDone ? "done-row" : ""}">
+          <td class="title" title="${(it.title || "").replace(/"/g, "&quot;")}">${it.title || shortId}</td>
+          <td>${progressCell(it.download)}</td>
+          <td>${transcribeCell(it)}</td>
+          <td>${progressCell(it.summarize)}</td>
+          <td>${progressCell(it.push)}</td>
+          <td class="num">${tokens}</td>
+          <td class="num">${cost}</td>
+        </tr>`;
+      }).join("");
+      progressbox.innerHTML = `<table class="progress">
+        <thead><tr>
+          <th>Title</th><th>Download</th><th>Transcribe</th><th>Summarize</th><th>Push</th>
+          <th class="num">Token</th><th class="num">Cost</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+    }
+
+    async function fetchProgress() {
+      try {
+        const res = await fetch("/api/progress?limit=300");
+        const data = await res.json();
+        renderProgress(data.items || []);
+      } catch (_) {
+        progressbox.innerHTML = `<div class="progress-empty">Progress load failed.</div>`;
+      }
+    }
+
     async function loadReport(vid) {
       if (!reportCache[vid]) {
         try {
@@ -690,12 +778,14 @@
       renderChannels();
       await stopSilently(); // ensure status starts stopped
       await clearLogFile(); // clear historical logs
-      fetchStatus();
-      fetchLog();
-      fetchReports();
-      setInterval(fetchStatus, 2000);
-      setInterval(fetchLog, 1000);
-      setInterval(fetchReports, 3000);
+      async function tick() {
+        await fetchStatus();
+        await fetchLog();
+        await fetchReports();
+        await fetchProgress();
+      }
+      tick();
+      setInterval(tick, 1500);
     })();
   </script>
 </body>

@@ -7,9 +7,6 @@ Version Compatibility
 Model Compatibility
 - [ ] model_info: Any model will work with the latest model info
 
-Frontend
-- [ ] Log: Better looking, use as a module
-
 Agent
 - [ ] outline: three-stage pipeline (split → per-section deep read → merge)
 - [ ] outline chunking: for long transcripts

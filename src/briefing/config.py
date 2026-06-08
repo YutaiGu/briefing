@@ -34,6 +34,9 @@ STATIC_DIR = PKG_DIR / "web" / "static"
 # writable: evolving per-domain/per-stage style preferences
 PREFERENCES_DIR = DATA_DIR / "preferences"
 
+# writable: one tiny file per in-flight video holding transcription percent (0-100)
+PROGRESS_DIR = DATA_DIR / "progress"
+
 # domains the review stage classifies talks into, with scope notes for the classifier
 DOMAINS = {
     "finance": "anything related to economy, finance, or money — investing, stocks, ETFs, "
@@ -157,7 +160,7 @@ def require_config() -> None:
 
 
 def check_config() -> tuple[bool, list[str], list[str]]:
-    for d in [DATA_DIR, AUDIO_DIR, OUTPUT_DIR, TEMPORARY_DIR, REPORT_DIR]:
+    for d in [DATA_DIR, AUDIO_DIR, OUTPUT_DIR, TEMPORARY_DIR, REPORT_DIR, PROGRESS_DIR]:
         d.mkdir(parents=True, exist_ok=True)
     if not PENDING_FILE.exists():
         PENDING_FILE.write_text("{}", encoding="utf-8")

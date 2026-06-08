@@ -22,7 +22,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from briefing.config import STATIC_DIR, DB_PATH, OUTPUT_DIR
+from briefing.config import STATIC_DIR, DB_PATH, OUTPUT_DIR, PROGRESS_DIR
 from sqlalchemy.orm import Session
 from briefing.db import engine, save_feedback, get_feedback_map, Video
 
@@ -90,6 +90,58 @@ def stop_run():
 @app.get("/api/status")
 def status():
     return runner.status()
+
+
+@app.get("/api/progress")
+def get_progress(limit: int = 300):
+    """In-flight videos (not yet pushed) with per-stage status and LLM usage."""
+    items = []
+    limit = max(1, min(limit, 2000))
+    if not DB_PATH.exists():
+        return {"items": items}
+
+    def stage(done, error=False):
+        return "error" if error else ("done" if done else "pending")
+
+    conn = sqlite3.connect(DB_PATH.as_posix())
+    conn.row_factory = sqlite3.Row
+    try:
+        # SELECT * so a DB not yet migrated to tokens/cost still works.
+        cur = conn.execute(
+            "SELECT * FROM videos WHERE pushed = 0 ORDER BY inserted_at DESC, id DESC LIMIT ?",
+            (limit,),
+        )
+        for r in cur.fetchall():
+            d = dict(r)
+            vid = (d.get("video_id") or "").strip()
+            downloaded = d.get("downloaded") or 0
+            dl_err = d.get("download_error") or ""
+
+            tprog = 0
+            pf = PROGRESS_DIR / vid
+            if vid and pf.exists():
+                try:
+                    tprog = int((pf.read_text(encoding="utf-8").strip() or "0"))
+                except Exception:
+                    tprog = 0
+
+            items.append({
+                "video_id": vid,
+                "title": d.get("title") or "",
+                "source": d.get("source") or "",
+                "download": stage(downloaded, bool(dl_err) and not downloaded),
+                "transcribe": stage(d.get("transcribed") or 0),
+                "transcribe_progress": tprog,
+                "summarize": stage(d.get("summarized") or 0),
+                "push": stage(d.get("pushed") or 0),
+                "tokens": int(d.get("tokens") or 0),
+                "cost": float(d.get("cost") or 0.0),
+                "error": dl_err,
+            })
+    finally:
+        conn.close()
+
+    return {"items": items}
 
 
 @app.get("/api/log")

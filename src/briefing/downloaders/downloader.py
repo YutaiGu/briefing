@@ -46,8 +46,7 @@ def downloader(session) -> None:
     _refresh_cookies()
     for source_url in SOURCE_URLS:
         entries = fetch_all_entries(source_url)
-        n = init_entries(session, entries)
-        print(f"Inited {n} entries.")
+        init_entries(session, entries)
         videos = get_undownloaded(session, source_url, UPDATE_LIMIT)
 
         ok = 0

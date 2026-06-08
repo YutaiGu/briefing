@@ -8,10 +8,16 @@ from briefing.config import api_info, model_info, model_para, api_model, OUTPUT_
 from briefing.config import SUMMARIZER_LIMIT, POOL_NUM
 from briefing.db import get_unsummarized, update_entries, entry_to_payload, payload_to_entry
 
+# per-process LLM usage accumulator, reset per video in one_summarizer
+_usage = {"tokens": 0, "cost": 0.0}
+
 def one_summarizer(payload):
     try:
-        print(f"Summarizing {payload['video_id']}")
+        _usage["tokens"] = 0
+        _usage["cost"] = 0.0
         payload = Text_Processing(payload)
+        payload['tokens'] = (payload.get('tokens') or 0) + _usage["tokens"]
+        payload['cost'] = round((payload.get('cost') or 0.0) + _usage["cost"], 6)
         payload['summarized'] = 1  # Mark only after final success
         return payload
     except Exception:
@@ -97,17 +103,16 @@ def request_gpt(input, system_content, model):
         print(f"An error occurred:", str(e))
         print(f"Text token: {len(encoding.encode(input))}")
 
-    # print
-    response_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     response_json = response.json()
     if response_json.get("error") is not None:
         print("request_gpt error:", response_json)
     cost = (model_info[model]["input_price"]*response_json['usage']['prompt_tokens']+model_info[model]["output_price"]*response_json['usage']['completion_tokens'])/1000
-    print(response_time + ":   ",
-          "Tokens: input:", f"{response_json['usage']['prompt_tokens']:<6}",
-          "output:", f"{response_json['usage']['completion_tokens']:<6}",
-          "total:", f"{response_json['usage']['total_tokens']:<6}",
-          "   Cost:", round(cost, 5))
+
+    try:
+        _usage["tokens"] += int(response_json['usage']['total_tokens'])
+        _usage["cost"] += cost
+    except Exception:
+        pass
 
     return response_json
 
@@ -223,11 +228,9 @@ def Text_Processing(payload):
     total_parts = len(chunks)
 
     ## step2: Outline Trace
-    print(f"[Outline] {file_name}:")
     if paths["outline"].exists():
         with open(paths["outline"], "r", encoding="utf-8") as f:
             outline_text = f.read()
-            print("outline.txt already exists.")
     else:
         outlines = []
         for idx, chunk in enumerate(chunks):
@@ -248,21 +251,17 @@ def Text_Processing(payload):
         paths["outline"].write_text(outline_text, encoding="utf-8")
 
     ## review: classify domain + fix mangled terms (objective, no evolution)
-    print(f"[Review] {file_name}:")
     domain = payload.get("domain")
     if not domain:
         review_out, _ = summarizer_request_gpt(outline_text, "review", api_model["review_model"])
         domain, outline_text = _parse_review(review_out, outline_text)
         payload["domain"] = domain
         paths["outline"].write_text(outline_text, encoding="utf-8")  # term-corrected
-    print(f"   domain = {domain}")
 
     ## brief (+ headline) — subjective, domain-aware
-    print(f"[Brief] {file_name}:")
     if paths["brief"].exists() and paths["headline"].exists():
         brief_text = paths["brief"].read_text(encoding="utf-8")
         headline_text = paths["headline"].read_text(encoding="utf-8")
-        print("brief.txt already exists.")
     else:
         raw = _subjective(outline_text, "brief", summarize_model, domain)
         headline_text, brief_text = _split_headline(raw)
@@ -270,10 +269,8 @@ def Text_Processing(payload):
         paths["brief"].write_text(brief_text, encoding="utf-8")
 
     ## recommend — subjective, domain-aware
-    print(f"[Recommend] {file_name}:")
     if paths["recommend"].exists():
         recommend_text = paths["recommend"].read_text(encoding="utf-8")
-        print("recommend.txt already exists.")
     else:
         recommend_text = _subjective(brief_text, "recommend", summarize_model, domain)
         paths["recommend"].write_text(recommend_text, encoding="utf-8")
