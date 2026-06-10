@@ -171,7 +171,10 @@ def _handler():
 
 
 def _run(coro):
-    return asyncio.run(coro)
+    # F2 prints page headers via a rich console (stdout); send all its output to the void.
+    import os, contextlib
+    with open(os.devnull, "w") as _null, contextlib.redirect_stdout(_null), contextlib.redirect_stderr(_null):
+        return asyncio.run(coro)
 
 
 def _find_play_url(obj) -> str | None:

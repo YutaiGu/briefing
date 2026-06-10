@@ -126,92 +126,34 @@ def clean_all(session) -> None:
         pass
     print("[CLEAN] Finished.\n")
 
+ENTRY_TTL_DAYS = 7
+
 def clean_entries(session) -> int:
-    """
-    Delete ONLY fully processed entries.
-    - local: delete fully processed entries older than 1 day (by inserted_at).
-    - non-local: for each source, keep latest ENTRIES_LIMIT entries.
-    """
+    """Delete every entry older than ENTRY_TTL_DAYS (by inserted_at), with its audio file."""
+    cutoff = datetime.now() - timedelta(days=ENTRY_TTL_DAYS)
     deleted = 0
-    cutoff = datetime.now() - timedelta(days=1)
-
-    stale_pending_deleted = 0
     try:
-        pending_rows = (
-            session.query(Video).filter(
-                Video.downloaded == 0,
-                Video.transcribed == 0,
-                Video.summarized == 0,
-                Video.pushed == 0,
-            )
-            .order_by(Video.id.desc())
-            .all()
-        )
+        rows = session.query(Video).all()
+    except Exception as e:
+        print(f"Error on clean_entries: {e}")
+        return 0
 
-        for v in pending_rows:
+    for v in rows:
+        try:
             ts = datetime.fromisoformat(v.inserted_at)
-            if ts < cutoff:
-                session.delete(v)
-                stale_pending_deleted += 1
-
-        if stale_pending_deleted:
+        except Exception:
+            continue  # unparseable timestamp — leave it
+        if ts >= cutoff:
+            continue
+        delete_audio_by_path(v.file_path)  # best-effort; the file may already be gone
+        try:
+            session.delete(v)
             session.commit()
-    except Exception as e:
-        print(f"Error on clean_entries stale_pending_deleted: {e}")
-        session.rollback()
+            deleted += 1
+        except Exception:
+            session.rollback()
 
-    try:
-        rows = (
-            session.query(Video).filter(
-                Video.downloaded == 1,
-                Video.transcribed == 1,
-                Video.summarized == 1,
-                Video.pushed == 1,
-            )
-            .order_by(Video.downloaded_at.desc())
-            .all()
-        )
-
-        local_rows = []
-        by_source = {}
-        for v in rows:
-            if v.source == "local":
-                local_rows.append(v)
-            else:
-                by_source.setdefault(v.source, []).append(v)
-
-        candidates = []
-        # local rule
-        for v in local_rows:
-            ts = datetime.fromisoformat(v.inserted_at)
-            if ts < cutoff:
-                candidates.append(v)
-
-        # yt-dlp rule
-        for _, src_rows in by_source.items():
-            # already sorted by downloaded_at
-            candidates.extend(src_rows[UPDATE_LIMIT:])
-
-        if not candidates:
-            return 0
-    
-        for v in candidates:
-            # delete file first
-            if not delete_audio_by_path(v.file_path):
-                continue
-
-            # delete one DB row, one commit
-            try:
-                session.delete(v)
-                session.commit()
-                deleted += 1
-            except Exception as ex:
-                session.rollback()
-
-        return deleted
-    except Exception as e:
-        print(f"Error on clean_entries rows: {e}")
-        return deleted
+    return deleted
 
 def delete_audio_by_path(file_path: str) -> bool:
     try:

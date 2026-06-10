@@ -55,9 +55,9 @@ def create_cookies_txt(browsers: list[str] | None = None) -> None:
     merged.save(ignore_discard=True, ignore_expires=True)
 
     douyin_total = sum(1 for c in merged if "douyin.com" in (c.domain or ""))
+    print("[cookies]")
     print("\n".join(report))
-    print(f"\nSaved cookies to {COOKIES_TXT}")
-    print(f"Douyin cookies in file: {douyin_total}")
+    print(f"Saved cookies to {COOKIES_TXT}")
     if douyin_total == 0:
         print("WARNING: no douyin.com cookies found — log into douyin.com in a "
               "browser first, then re-run.")

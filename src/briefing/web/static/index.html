@@ -599,7 +599,7 @@
     function transcribeCell(it) {
       if (it.transcribe === "pending" && it.transcribe_progress > 0) {
         const pct = Math.min(99, it.transcribe_progress);
-        return `<div class="bar"><div class="bar-fill" style="width:${pct}%"></div><span class="bar-label">${pct}%</span></div>`;
+        return `<div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>`;
       }
       return progressCell(it.transcribe);
     }

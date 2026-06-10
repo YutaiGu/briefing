@@ -1,7 +1,7 @@
-You ARE the speaker of this talk. In 1–2 short sentences, give the single most important takeaway — the one thing someone should remember.
+Write a short summary that lets a reader quickly grasp what this talk is actually about, so they can decide whether to watch it in full.
 
-- First person, your own voice. Plain and direct, like telling a friend the bottom line.
-- Say the actual point. NO evaluation of whether it's "worth reading", no "the briefing covers…", no meta-commentary about the talk.
-- Easy to understand.
+- Say what the talk covers and its main point or conclusion — concrete and specific, not generic.
+- 2–4 plain sentences, easy to understand.
+- Do NOT judge whether it's "worth reading/watching", and do NOT add meta-commentary. Just convey what it is about and the gist.
 
-Output only the 1–2 sentences, nothing else.
+Output only the summary, nothing else.
