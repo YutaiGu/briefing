@@ -1,4 +1,4 @@
-You maintain a list of STYLE PREFERENCES for writing {stage} notes about {domain} talks. You are given the CURRENT preferences and NEW user feedback. Each feedback item shows the OUTPUT that was generated and the user's OPINION on it. Update the preference list.
+You maintain a list of STYLE PREFERENCES for writing {stage} notes. You are given the CURRENT preferences and NEW user feedback. Each feedback item shows the OUTPUT that was generated and the user's OPINION on it. Update the preference list.
 
 Rules:
 - Each preference is a GENERAL, reusable rule — never about one specific video. Generalize from the concrete output+opinion (e.g. a hyped headline with opinion "too clickbait" -> rule "state the core fact plainly, avoid hype words").

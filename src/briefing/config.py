@@ -37,18 +37,6 @@ PREFERENCES_DIR = DATA_DIR / "preferences"
 # writable: one tiny file per in-flight video holding transcription percent (0-100)
 PROGRESS_DIR = DATA_DIR / "progress"
 
-# domains the review stage classifies talks into, with scope notes for the classifier
-DOMAINS = {
-    "finance": "anything related to economy, finance, or money — investing, stocks, ETFs, "
-               "bonds, funds, markets, valuation, company/earnings/industry analysis, "
-               "macro- and micro-economics, monetary and fiscal policy, central banks, "
-               "banking, crypto, trade, business and corporate strategy, real estate, "
-               "personal finance, and any lecture/talk/commentary on these topics. "
-               "Interpret VERY BROADLY: if it touches the economy or money, it is finance.",
-    "other": "anything that is clearly not about economy, finance, or money",
-}
-
-
 def load_prompt(name: str) -> str:
     path = PROMPT_DIR / f"{name}.txt"
     if not path.exists():
@@ -59,7 +47,6 @@ def load_prompt(name: str) -> str:
 model_para = {
     "system_content": {
         "outline": load_prompt("outline"),
-        "review": load_prompt("review").format(domains="\n".join(f"- {k}: {v}" for k, v in DOMAINS.items())),
         "brief": load_prompt("brief"),
         "recommend": load_prompt("recommend"),
         "additional": "",
@@ -150,7 +137,6 @@ if CONFIG_JSON.exists():
         "whisper_model": _cfg["whisper_model"],
         "summarize_model": _cfg["summarize_model"],
         "translate_model": _cfg["translate_model"],
-        "review_model": _cfg["review_model"],
     }
     CONFIG_LOADED = True
 

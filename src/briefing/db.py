@@ -49,7 +49,6 @@ class Feedback(Base):
     __tablename__ = "feedback"
     video_id = Column(String, primary_key=True)                 # the video this opinion is about
     stage = Column(String, primary_key=True)                    # headline / brief / recommend
-    domain = Column(String)                                     # which domain's preferences this informs
     output = Column(String)                                     # the generated text the user critiqued
     opinion = Column(String)                                    # the user's improvement note
     applied = Column(Integer, nullable=False, default=0)        # 0/1 distilled into notes yet
@@ -377,13 +376,13 @@ def get_entries_by_ids(session, video_ids: list[str]):
     stmt = select(Video).where(Video.video_id.in_(video_ids))
     return session.execute(stmt).scalars().all()
 
-def save_feedback(session, video_id: str, domain: str, stage: str, output: str, opinion: str) -> None:
+def save_feedback(session, video_id: str, stage: str, output: str, opinion: str) -> None:
     # one opinion per (video_id, stage): upsert, and reset applied so it re-evolves
     fb = session.get(Feedback, (video_id, stage))
     if fb:
-        fb.domain, fb.output, fb.opinion, fb.applied = domain, output, opinion, 0
+        fb.output, fb.opinion, fb.applied = output, opinion, 0
     else:
-        session.add(Feedback(video_id=video_id, domain=domain, stage=stage,
+        session.add(Feedback(video_id=video_id, stage=stage,
                              output=output, opinion=opinion, applied=0))
     session.commit()
 

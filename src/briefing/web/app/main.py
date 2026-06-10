@@ -24,7 +24,7 @@ app.add_middleware(
 
 from briefing.config import STATIC_DIR, DB_PATH, OUTPUT_DIR, PROGRESS_DIR
 from sqlalchemy.orm import Session
-from briefing.db import engine, save_feedback, get_feedback_map, Video
+from briefing.db import engine, save_feedback, get_feedback_map
 
 BROWSER_URL = os.environ.get("RUNNER_URL", "http://localhost:8000/")
 AUTO_OPEN   = os.environ.get("AUTO_OPEN_BROWSER", "1") != "0"
@@ -228,7 +228,5 @@ def post_feedback(body: dict):
     src = OUTPUT_DIR / video_id / f"{stage}.txt"
     output = src.read_text(encoding="utf-8").strip() if src.exists() else ""
     with Session(engine, future=True) as session:
-        v = session.query(Video).filter(Video.video_id == video_id).first()
-        domain = (v.domain if v and v.domain else None) or "other"
-        save_feedback(session, video_id, domain, stage, output, opinion)
-    return {"ok": True, "domain": domain}
+        save_feedback(session, video_id, stage, output, opinion)
+    return {"ok": True}

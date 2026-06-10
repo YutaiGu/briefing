@@ -36,6 +36,6 @@ Drop only clearly non-substantive material: greetings, small talk, audience inte
 === Constraints ===
 1) Steps must follow the original chronological / narrative order. Do NOT reorder.
 2) Keep titles close to the speaker's own phrasing; do not invent abstract labels.
-3) Output in ENGLISH.
+3) Output in ENGLISH — EXCEPT proper nouns (company / person / place / product / brand names, stock names or tickers): keep these exactly as they appear in the transcript, in their original language and spelling. Do NOT translate or transliterate them.
 
 Now produce the Global Outline & Logic Trace for the transcript below.

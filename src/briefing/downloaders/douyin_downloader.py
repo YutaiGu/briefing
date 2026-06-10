@@ -26,7 +26,14 @@ from pathlib import Path
 
 import requests
 
-from briefing.config import BASE_DIR, AUDIO_DIR, DATA_DIR
+from briefing.config import COOKIES_TXT, AUDIO_DIR, DATA_DIR
+
+import logging
+
+def _quiet_f2() -> None:
+    logging.getLogger("f2").setLevel(logging.CRITICAL)  # silence F2's verbose logging
+
+_quiet_f2()
 
 # On-disk cache of fresh direct URLs captured during homepage listing, so the
 # later download phase can reuse them instead of calling the Douyin API again.
@@ -112,7 +119,7 @@ def cache_get(video_id: str) -> str | None:
 def _load_cookie() -> str:
     """Build a 'k=v; k=v' Cookie header from cookies.txt (Mozilla format,
     filtered to douyin.com). Returns "" if none found."""
-    cookies_txt = BASE_DIR / "cookies.txt"
+    cookies_txt = COOKIES_TXT
     if cookies_txt.exists():
         try:
             jar = MozillaCookieJar()
@@ -159,6 +166,7 @@ def _build_kwargs() -> dict:
 
 def _handler():
     from f2.apps.douyin.handler import DouyinHandler
+    _quiet_f2()  # re-apply: F2 resets its logger level on init
     return DouyinHandler(_build_kwargs())
 
 
@@ -313,7 +321,7 @@ def fetch_homepage_entries(source_url: str, limit: int) -> list[dict]:
         print(f"[douyin] fetched {len(entries)} entries from {source_url}")
         return entries
     except Exception as e:
-        print(f"[douyin] fetch_homepage_entries failed: {type(e).__name__}: {e}")
+        print(f"[douyin] fetch_homepage_entries failed: {type(e).__name__}")
         return []
 
 
@@ -333,7 +341,7 @@ def resolve_direct_url(webpage_url: str) -> str | None:
     try:
         return _run(_aresolve_direct_url(webpage_url))
     except Exception as e:
-        print(f"[douyin] resolve failed for {webpage_url}: {type(e).__name__}: {e}")
+        print(f"[douyin] resolve failed for {webpage_url}: {type(e).__name__}")
         return None
 
 
@@ -376,7 +384,7 @@ def _stream_to(direct_url: str, out_path_no_ext: Path) -> Path | None:
                     if chunk:
                         f.write(chunk)
     except Exception as e:
-        print(f"[douyin] download failed: {type(e).__name__}: {e}")
+        print(f"[douyin] download failed: {type(e).__name__}")
         if out_path and out_path.exists():
             try:
                 out_path.unlink()

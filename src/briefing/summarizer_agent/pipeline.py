@@ -100,8 +100,8 @@ def request_gpt(input, system_content, model):
             timeout=(20, 120),  # Connection timeout: 10s, Read timeout 120s
         )
     except Exception as e:
-        print(f"An error occurred:", str(e))
-        print(f"Text token: {len(encoding.encode(input))}")
+        print(f"[gpt] request failed: {type(e).__name__}")
+        raise
 
     response_json = response.json()
     if response_json.get("error") is not None:
@@ -148,30 +148,15 @@ def summarizer_request_gpt(input, which_system, model):
 
     return response_txt, history
 
-def _subjective(input_text, stage, model, domain):
-    """Generate a subjective stage, injecting that (domain, stage)'s learned preferences."""
+def _subjective(input_text, stage, model):
+    """Generate a subjective stage, injecting that stage's learned preferences."""
     from briefing.summarizer_agent import evolve
     system = model_para["system_content"][stage] + model_para["system_content"]["additional"]
-    notes = evolve.load_notes(domain, stage)
+    notes = evolve.load_notes(stage)
     if notes:
-        system += f"\n\n=== Learned style preferences for {domain} (follow these) ===\n{notes}"
+        system += f"\n\n=== Learned style preferences (follow these) ===\n{notes}"
     resp = request_gpt(input_text, system, model)
     return resp["choices"][0]["message"]["content"]
-
-def _parse_review(review_out, original_outline):
-    """Parse review output 'DOMAIN: x\\n---\\n<corrected outline>' -> (domain, outline)."""
-    from briefing.config import DOMAINS
-    domain, outline = "other", original_outline
-    if review_out:
-        first = review_out.splitlines()[0] if review_out.splitlines() else ""
-        if first.strip().upper().startswith("DOMAIN:"):
-            d = first.split(":", 1)[1].strip().lower()
-            if d in DOMAINS:
-                domain = d
-        parts = review_out.split("---", 1)
-        if len(parts) == 2 and parts[1].strip():
-            outline = parts[1].strip()
-    return domain, outline
 
 def _split_headline(raw):
     """Split brief output 'HEADLINE: x\\n---\\n<body>' -> (headline, body)."""
@@ -250,29 +235,21 @@ def Text_Processing(payload):
         outline_text = "\n\n".join(outlines)
         paths["outline"].write_text(outline_text, encoding="utf-8")
 
-    ## review: classify domain + fix mangled terms (objective, no evolution)
-    domain = payload.get("domain")
-    if not domain:
-        review_out, _ = summarizer_request_gpt(outline_text, "review", api_model["review_model"])
-        domain, outline_text = _parse_review(review_out, outline_text)
-        payload["domain"] = domain
-        paths["outline"].write_text(outline_text, encoding="utf-8")  # term-corrected
-
-    ## brief (+ headline) — subjective, domain-aware
+    ## brief (+ headline) — subjective
     if paths["brief"].exists() and paths["headline"].exists():
         brief_text = paths["brief"].read_text(encoding="utf-8")
         headline_text = paths["headline"].read_text(encoding="utf-8")
     else:
-        raw = _subjective(outline_text, "brief", summarize_model, domain)
+        raw = _subjective(outline_text, "brief", summarize_model)
         headline_text, brief_text = _split_headline(raw)
         paths["headline"].write_text(headline_text, encoding="utf-8")
         paths["brief"].write_text(brief_text, encoding="utf-8")
 
-    ## recommend — subjective, domain-aware
+    ## recommend — subjective
     if paths["recommend"].exists():
         recommend_text = paths["recommend"].read_text(encoding="utf-8")
     else:
-        recommend_text = _subjective(brief_text, "recommend", summarize_model, domain)
+        recommend_text = _subjective(brief_text, "recommend", summarize_model)
         paths["recommend"].write_text(recommend_text, encoding="utf-8")
 
     return payload

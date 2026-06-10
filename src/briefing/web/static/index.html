@@ -72,7 +72,7 @@
     .md { line-height: 1.65; color: #0f172a; }
     .md p { margin: 0 0 10px; }
     .md h1, .md h2, .md h3 { margin: 12px 0 8px; line-height: 1.35; }
-    .md ul { margin: 8px 0 10px 20px; }
+    .md ul, .md ol { margin: 8px 0 10px 22px; }
     .md code { background: #f1f5f9; padding: 1px 4px; border-radius: 4px; }
     .md pre { background: #0f172a; color: #e2e8f0; padding: 10px; border-radius: 8px; overflow-x: auto; }
     .tip { position: relative; display: inline-block; border-bottom: 1px dotted #9ca3af; }
@@ -203,7 +203,8 @@
     const logbox = document.getElementById("logbox");
     const reportbox = document.getElementById("reportbox");
     const progressbox = document.getElementById("progressbox");
-    let prevProgress = new Map();  // video_id -> last in-progress row, to keep just-completed visible one cycle
+    let prevProgress = new Map();  // video_id -> last in-progress row (to detect completion)
+    let doneProgress = new Map();  // completed rows, kept accumulated until the next Run
     const reportModal = document.getElementById("report-modal");
     const reportModalTitle = document.getElementById("report-modal-title");
     const reportModalBody = document.getElementById("report-modal-body");
@@ -387,6 +388,8 @@
     };
 
     runBtn.onclick = async () => {
+      doneProgress.clear();   // a new Run clears the accumulated completed rows
+      prevProgress.clear();
       const res = await fetch("/api/run", { method: "POST" });
       if (res.status === 409) alert("Already running");
       await fetchStatus();
@@ -420,31 +423,33 @@
     }
 
     function renderMarkdown(src) {
-      let s = escapeHtml(src || "").replace(/\r\n/g, "\n");
-
-      // fenced code blocks
-      s = s.replace(/```([\s\S]*?)```/g, (_, code) => `<pre><code>${code}</code></pre>`);
-
-      // headers
-      s = s.replace(/^### (.+)$/gm, "<h3>$1</h3>");
-      s = s.replace(/^## (.+)$/gm, "<h2>$1</h2>");
-      s = s.replace(/^# (.+)$/gm, "<h1>$1</h1>");
-
-      // unordered lists
-      s = s.replace(/(?:^|\n)- (.+)(?=\n|$)/g, "\n<li>$1</li>");
-      s = s.replace(/(<li>[\s\S]*?<\/li>)/g, "<ul>$1</ul>");
-      s = s.replace(/<\/ul>\s*<ul>/g, "");
-
-      // inline formats
-      s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-      s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
-
-      // paragraphs + line breaks
-      const blocks = s.split(/\n{2,}/).map(b => b.trim()).filter(Boolean).map(b => {
-        if (/^<(h1|h2|h3|ul|pre)/.test(b)) return b;
-        return `<p>${b.replace(/\n/g, "<br>")}</p>`;
-      });
-      return blocks.join("\n");
+      const inline = (t) => escapeHtml(t)
+        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/`([^`]+)`/g, "<code>$1</code>");
+      const lines = (src || "").replace(/\r\n/g, "\n").split("\n");
+      const out = [];
+      let listType = null, para = [], inCode = false, code = [];
+      const flushPara = () => { if (para.length) { out.push(`<p>${para.map(inline).join("<br>")}</p>`); para = []; } };
+      const closeList = () => { if (listType) { out.push(`</${listType}>`); listType = null; } };
+      for (const raw of lines) {
+        if (/^\s*```/.test(raw)) {
+          if (inCode) { out.push(`<pre><code>${escapeHtml(code.join("\n"))}</code></pre>`); code = []; inCode = false; }
+          else { flushPara(); closeList(); inCode = true; }
+          continue;
+        }
+        if (inCode) { code.push(raw); continue; }
+        const line = raw.trimEnd();
+        let m;
+        if (/^\s*$/.test(line)) { flushPara(); closeList(); continue; }
+        if ((m = line.match(/^(#{1,3})\s+(.+)$/))) { flushPara(); closeList(); out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`); continue; }
+        if ((m = line.match(/^\s*[-*]\s+(.+)$/))) { flushPara(); if (listType !== "ul") { closeList(); out.push("<ul>"); listType = "ul"; } out.push(`<li>${inline(m[1])}</li>`); continue; }
+        if ((m = line.match(/^\s*\d+[.)]\s+(.+)$/))) { flushPara(); if (listType !== "ol") { closeList(); out.push("<ol>"); listType = "ol"; } out.push(`<li>${inline(m[1])}</li>`); continue; }
+        closeList();
+        para.push(line);
+      }
+      if (inCode && code.length) out.push(`<pre><code>${escapeHtml(code.join("\n"))}</code></pre>`);
+      flushPara(); closeList();
+      return out.join("\n");
     }
 
     function cleanSource(s) {
@@ -600,16 +605,16 @@
     }
 
     function renderProgress(items) {
-      // carry tasks that just left the in-progress set (completed) for one more cycle
+      // a task that left the in-progress set just completed — accumulate it (kept until next Run)
       const currentIds = new Set(items.map(i => i.video_id));
-      const justDone = [];
       prevProgress.forEach((row, id) => {
         if (!currentIds.has(id)) {
-          justDone.push({ ...row, download: "done", transcribe: "done", summarize: "done", push: "done", _justDone: true });
+          doneProgress.set(id, { ...row, download: "done", transcribe: "done", summarize: "done", push: "done", _justDone: true });
         }
       });
       prevProgress = new Map(items.map(i => [i.video_id, i]));
-      const all = items.concat(justDone);
+      currentIds.forEach(id => doneProgress.delete(id));   // if it's in-flight again, don't double-show
+      const all = items.concat(Array.from(doneProgress.values()));
 
       if (!all.length) {
         progressbox.innerHTML = `<div class="progress-empty">No tasks in progress.</div>`;
