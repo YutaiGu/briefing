@@ -212,7 +212,7 @@ def get_report_detail(video_id: str):
         "video_id": v,
         "content": data.get("content", ""),
         "headline": data.get("headline", ""),
-        "recommend": data.get("recommend", ""),
+        "short": data.get("short", ""),
         "feedback": feedback,
     }
 
@@ -222,7 +222,7 @@ def post_feedback(body: dict):
     video_id = (body.get("video_id") or "").strip()
     stage = (body.get("stage") or "").strip()
     opinion = (body.get("opinion") or "").strip()
-    if not video_id or not opinion or stage not in ("headline", "brief", "recommend"):
+    if not video_id or not opinion or stage not in ("headline", "brief", "short"):
         raise HTTPException(status_code=400, detail="video_id, valid stage, and non-empty opinion required")
     # store the English generated text (internal flow is English), not the translated display
     src = OUTPUT_DIR / video_id / f"{stage}.txt"

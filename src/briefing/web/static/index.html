@@ -30,13 +30,13 @@
     .report-subtitle { font-size: 12px; color: #64748b; }
     .report-footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
     .report-expand { border-top: 1px solid #e2e8f0; margin-top: 10px; padding-top: 10px; }
-    .recommend-block { padding: 10px 14px; border-left: 3px solid #0ea5e9; background: #f0f9ff; border-radius: 0 6px 6px 0; color: #334155; font-size: 13px; line-height: 1.6; }
+    .short-block { padding: 10px 14px; border-left: 3px solid #0ea5e9; background: #f0f9ff; border-radius: 0 6px 6px 0; color: #334155; font-size: 13px; line-height: 1.6; }
     .fb { margin: 6px 0 20px; }
     .fb-input { width: 100%; box-sizing: border-box; font-size: 12px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; resize: vertical; font-family: inherit; }
     .fb-send { margin-top: 4px; font-size: 12px; padding: 5px 14px; border: none; border-radius: 6px; background: #2563eb; color: #fff; font-weight: 500; cursor: pointer; }
     .fb-send:hover { background: #1d4ed8; }
     .fb-status { font-size: 12px; color: #64748b; margin-left: 8px; }
-    .md, .recommend-block, #report-modal-body { user-select: text; }
+    .md, .short-block, #report-modal-body { user-select: text; }
     .report-meta { font-size: 12px; color: #64748b; }
     .report-open { border: 1px solid #bfdbfe; background: #eff6ff; color: #1e3a8a; padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; }
     .report-wrap { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; }
@@ -510,7 +510,7 @@
         const isNew = newIds.has(item.video_id);
         const expanded = expandedVids.has(item.video_id) && reportCache[item.video_id];
         const expandHtml = expanded
-          ? `<div class="recommend-block md">${renderMarkdown(reportCache[item.video_id].recommend || "")}</div>`
+          ? `<div class="short-block md">${renderMarkdown(reportCache[item.video_id].short || "")}</div>`
           : "";
         return `
           <div class="report-item${isNew ? " is-new" : ""}" data-vid="${vid}">
@@ -526,7 +526,7 @@
                 </span>
               </div>
             </div>
-            <div class="report-expand recommend-expand"${expanded ? ' data-loaded="1"' : " hidden"}>${expandHtml}</div>
+            <div class="report-expand short-expand"${expanded ? ' data-loaded="1"' : " hidden"}>${expandHtml}</div>
           </div>
         `;
       };
@@ -684,14 +684,14 @@
         const vid = toggleBtn.dataset.vid;
         const card = reportbox.querySelector(`.report-item[data-vid="${CSS.escape(vid)}"]`);
         if (!card) return;
-        const expandDiv = card.querySelector(".recommend-expand");
+        const expandDiv = card.querySelector(".short-expand");
         const willExpand = expandDiv.hidden;
         if (willExpand) {
           if (!expandDiv.dataset.loaded) {
             const prev = toggleBtn.textContent;
             toggleBtn.textContent = "Loading…";
             const data = await loadReport(vid);
-            expandDiv.innerHTML = `<div class="recommend-block md">${renderMarkdown(data.recommend || "")}</div>`;
+            expandDiv.innerHTML = `<div class="short-block md">${renderMarkdown(data.short || "")}</div>`;
             expandDiv.dataset.loaded = "1";
             toggleBtn.textContent = prev;
           }
@@ -725,7 +725,7 @@
     const FB_TXT = {
       headline:  { en: "Headline",  zh: "标题" },
       brief:     { en: "Brief",     zh: "简报" },
-      recommend: { en: "Recommend", zh: "推荐" },
+      short:     { en: "Short",     zh: "短摘要" },
       submit:    { en: "Submit feedback", zh: "提交意见" },
       ph:        { en: "Feedback (leave empty = fine)", zh: "改进意见（不填=满意）" },
     };
@@ -743,11 +743,11 @@
       const fb = data.feedback || {};
       const h = (data.headline || "").trim();
       const c = (data.content || "").trim();
-      const r = (data.recommend || "").trim();
+      const r = (data.short || "").trim();
       let html = "";
       if (h) html += `<h3>${fbt("headline")}</h3><div class="md">${renderMarkdown(h)}</div>` + fbBox("headline", fb.headline);
       html += `<h3>${fbt("brief")}</h3><div class="md">${renderMarkdown(c)}</div>` + fbBox("brief", fb.brief);
-      if (r) html += `<h3>${fbt("recommend")}</h3><div class="recommend-block md">${renderMarkdown(r)}</div>` + fbBox("recommend", fb.recommend);
+      if (r) html += `<h3>${fbt("short")}</h3><div class="short-block md">${renderMarkdown(r)}</div>` + fbBox("short", fb.short);
       return html;
     }
 

@@ -2,9 +2,12 @@ import json
 import requests
 from datetime import datetime
 
-from briefing.config import api_model, READ_LANGUAGE, OUTPUT_DIR, NTFY_SERVER, COMPRESS_LEVEl, REPORT_DIR, PUSH_TO
+from briefing.config import api_model, READ_LANGUAGE, OUTPUT_DIR, NTFY_SERVER, COMPRESS_LEVEl, REPORT_DIR, PUSH_TO, load_prompt
 from briefing.db import get_unpushed, update_entries
 from briefing.summarizer_agent import request_gpt
+
+_TRANSLATE_TMPL = load_prompt("translate")
+_ENGLISH = ("en", "en-us", "english", "English")
 
 def pushto_ntfy(message: str) -> bool:
     if NTFY_SERVER is None:
@@ -37,62 +40,28 @@ def pushto_localfile(message: str) -> None:
     except Exception:
         return False
 
+def _no_translate(input: str):
+    return {"choices": [{"message": {"content": input}}]}
+
+def _compress_clause() -> str:
+    if COMPRESS_LEVEl == 100:
+        return ""
+    return (f" Then compress to approximately {COMPRESS_LEVEl}% of the original length: "
+            "preserve the core thesis, key facts, and reasoning structure; merge related "
+            "arguments that support the same conclusion and cut repetition and restatements.")
+
 def translate_text(input: str, language: str) -> str:
-    if language in ("en", "en-us", "english", "English"):
-        return {
-            "choices": [
-                {
-                    "message": {
-                        "content": input
-                    }
-                }
-            ]
-        }
-    response_json = request_gpt(
-        input,
-        f"You are a translation engine. Your task is to translate the user input into {language}. Output only the translation. Do not add any commentary, prefixes, suffixes, or explanations. Preserve the original formatting exactly. "
-        f"Format in Markdown. Use **bold** sparingly: only a few genuinely key figures, names, or conclusions per section — never bold whole sentences or common words. "
-        f"If a proper noun was clearly misheard by speech-to-text (a brand, company, person, place, or stock name), correct it to its real canonical name.",
-        api_model["translate_model"],
-    )
-    return response_json
+    if language in _ENGLISH:
+        return _no_translate(input)
+    system = _TRANSLATE_TMPL.format(language=language, compress="")
+    return request_gpt(input, system, api_model["translate_model"])
 
 def translate_and_compress(input: str, language: str):
-    if language not in ("en", "en-us", "english", "English") and COMPRESS_LEVEl != 100:  # translate + compress
-        response_json = request_gpt(
-            input,
-            f"Translate the user input into {language}. Translate the user input into {language}. Compress the content to approximately {COMPRESS_LEVEl}% of the original length. Preserve the core thesis, key financial facts, and the overall reasoning structure. Merge related arguments that support the same conclusion. Eliminate repeated arguments, illustrative restatements, and secondary justifications. Maintain logical coherence and emphasis, but do not preserve one-to-one paragraph mapping. Output only the translation. "
-            f"Format in Markdown. Use **bold** sparingly: only a few genuinely key figures, names, or conclusions per section — never bold whole sentences or common words. "
-        f"If a proper noun was clearly misheard by speech-to-text (a brand, company, person, place, or stock name), correct it to its real canonical name.",
-            api_model["translate_model"],
-        )
-    elif language not in ("en", "en-us", "english", "English") and COMPRESS_LEVEl == 100:  # translate
-        response_json = request_gpt(
-            input,
-            f"You are a translation engine. Your task is to translate the user input into {language}. Output only the translation. Do not add any commentary, prefixes, suffixes, or explanations. Preserve the original formatting exactly. "
-            f"Format in Markdown. Use **bold** sparingly: only a few genuinely key figures, names, or conclusions per section — never bold whole sentences or common words. "
-        f"If a proper noun was clearly misheard by speech-to-text (a brand, company, person, place, or stock name), correct it to its real canonical name.",
-            api_model["translate_model"],
-        )
-    elif COMPRESS_LEVEl != 100:  # compress
-        response_json = request_gpt(
-            input,
-            f"Compress the content to approximately {COMPRESS_LEVEl}% of the original length. Preserve the core thesis, key financial facts, and the overall reasoning structure. Merge related arguments that support the same conclusion. Eliminate repeated arguments, illustrative restatements, and secondary justifications. Maintain logical coherence and emphasis, but do not preserve one-to-one paragraph mapping. Output only the translation. "
-            f"Format in Markdown. Use **bold** sparingly: only a few genuinely key figures, names, or conclusions per section — never bold whole sentences or common words. "
-        f"If a proper noun was clearly misheard by speech-to-text (a brand, company, person, place, or stock name), correct it to its real canonical name.",
-            api_model["translate_model"],
-        )
-    else:  # origin
-        return {
-            "choices": [
-                {
-                    "message": {
-                        "content": input
-                    }
-                }
-            ]
-        }
-    return response_json
+    if language in _ENGLISH and COMPRESS_LEVEl == 100:
+        return _no_translate(input)
+    target = "English" if language in _ENGLISH else language
+    system = _TRANSLATE_TMPL.format(language=target, compress=_compress_clause())
+    return request_gpt(input, system, api_model["translate_model"])
 
 def pusher(session, limit: int) -> None:
     todo = get_unpushed(session, limit)
@@ -121,7 +90,7 @@ def pusher(session, limit: int) -> None:
 
             vid_dir = OUTPUT_DIR / str(v.video_id)
             headline_src = (vid_dir / "headline.txt").read_text(encoding="utf-8").strip() if (vid_dir / "headline.txt").exists() else ""
-            recommend_src = (vid_dir / "recommend.txt").read_text(encoding="utf-8").strip() if (vid_dir / "recommend.txt").exists() else ""
+            short_src = (vid_dir / "short.txt").read_text(encoding="utf-8").strip() if (vid_dir / "short.txt").exists() else ""
 
             print(f"[Translating] {v.video_id}")
             try:
@@ -136,21 +105,21 @@ def pusher(session, limit: int) -> None:
                 except Exception:
                     headline = headline_src
 
-            recommend = ""
-            if recommend_src:
+            short = ""
+            if short_src:
                 try:
-                    recommend = translate_text(recommend_src, READ_LANGUAGE)['choices'][0]['message']['content']
+                    short = translate_text(short_src, READ_LANGUAGE)['choices'][0]['message']['content']
                 except Exception:
-                    recommend = recommend_src
+                    short = short_src
 
             (vid_dir / "report.json").write_text(
-                json.dumps({"content": content, "headline": headline, "recommend": recommend}, ensure_ascii=False, indent=2),
+                json.dumps({"content": content, "headline": headline, "short": short}, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
 
             notification = f"# {upload_date} {source}\n{title}\n"
-            if headline or recommend:
-                notification += (f"**{headline}**\n" if headline else "") + (f"> {recommend}\n" if recommend else "") + "\n---\n"
+            if headline or short:
+                notification += (f"**{headline}**\n" if headline else "") + (f"> {short}\n" if short else "") + "\n---\n"
             notification += content
             parts.append(notification)
 

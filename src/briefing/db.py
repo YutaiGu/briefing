@@ -48,7 +48,7 @@ class Video(Base):
 class Feedback(Base):
     __tablename__ = "feedback"
     video_id = Column(String, primary_key=True)                 # the video this opinion is about
-    stage = Column(String, primary_key=True)                    # headline / brief / recommend
+    stage = Column(String, primary_key=True)                    # headline / brief / short
     output = Column(String)                                     # the generated text the user critiqued
     opinion = Column(String)                                    # the user's improvement note
     applied = Column(Integer, nullable=False, default=0)        # 0/1 distilled into notes yet

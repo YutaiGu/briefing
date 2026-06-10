@@ -48,7 +48,7 @@ model_para = {
     "system_content": {
         "outline": load_prompt("outline"),
         "brief": load_prompt("brief"),
-        "recommend": load_prompt("recommend"),
+        "short": load_prompt("short"),
         "additional": "",
     },
     "temperature": 0.1,

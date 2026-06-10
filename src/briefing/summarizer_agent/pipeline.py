@@ -184,7 +184,7 @@ def Text_Processing(payload):
         "outline": WORK_DIR / "outline.txt",
         "brief": WORK_DIR / "brief.txt",
         "headline": WORK_DIR / "headline.txt",
-        "recommend": WORK_DIR / "recommend.txt",
+        "short": WORK_DIR / "short.txt",
     }
     summarize_model = api_model["summarize_model"]
     model_name = model_info[summarize_model]["model"]
@@ -245,11 +245,11 @@ def Text_Processing(payload):
         paths["headline"].write_text(headline_text, encoding="utf-8")
         paths["brief"].write_text(brief_text, encoding="utf-8")
 
-    ## recommend — subjective
-    if paths["recommend"].exists():
-        recommend_text = paths["recommend"].read_text(encoding="utf-8")
+    ## short — subjective
+    if paths["short"].exists():
+        short_text = paths["short"].read_text(encoding="utf-8")
     else:
-        recommend_text = _subjective(brief_text, "recommend", summarize_model)
-        paths["recommend"].write_text(recommend_text, encoding="utf-8")
+        short_text = _subjective(brief_text, "short", summarize_model)
+        paths["short"].write_text(short_text, encoding="utf-8")
 
     return payload

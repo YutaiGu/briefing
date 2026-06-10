@@ -7,7 +7,7 @@ injected into that stage's prompt at generation time.
 from briefing.config import PREFERENCES_DIR, load_prompt
 from briefing.db import get_unapplied_feedback, mark_feedback_applied
 
-SUBJECTIVE_STAGES = ("brief", "recommend")
+SUBJECTIVE_STAGES = ("brief", "short")
 MAX_RULES = 12
 
 _EVOLVE_PROMPT = load_prompt("evolve")
