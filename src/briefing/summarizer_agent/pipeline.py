@@ -2,7 +2,7 @@ import tiktoken
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
 
-from briefing.config import model_para, api_model, OUTPUT_DIR
+from briefing.config import model_para, api_model, OUTPUT_DIR, resolve_model
 from briefing.config import SUMMARIZER_LIMIT, POOL_NUM
 from briefing.db import get_unsummarized, update_entries, entry_to_payload, payload_to_entry
 from briefing.llm import completion, completion_cost, model_limits
@@ -26,7 +26,7 @@ def summarizer(session) -> None:
     # fold any new user feedback into the per-domain style preferences first
     try:
         from briefing.summarizer_agent import evolve
-        evolve.evolve(session, api_model["summarize_model"])
+        evolve.evolve(session, api_model["evolve_model"])
     except Exception as e:
         print(f"[evolve pass skipped: {e}]")
 
@@ -47,17 +47,20 @@ def request_gpt(input, system_content, model):
     if not model:
         raise ValueError("model is required")
 
+    name, key, base = resolve_model(model)
     messages = [
         {"role": "system", "content": system_content},
         {"role": "user", "content": input},
     ]
     try:
         response_json = completion(
-            model=model,
+            model=name,
             messages=messages,
+            api_key=key,
+            api_base=base,
             temperature=model_para["temperature"],
             presence_penalty=model_para["presence_penalty"],
-            max_tokens=model_limits(model)["max_output"],
+            max_tokens=model_limits(name)["max_output"],
         )
     except Exception as e:
         print(f"[gpt] request failed: {type(e).__name__}")
@@ -157,8 +160,9 @@ def Text_Processing(payload):
         "headline": WORK_DIR / "headline.txt",
         "short": WORK_DIR / "short.txt",
     }
-    summarize_model = api_model["summarize_model"]
-    model_name = summarize_model
+    outline_model = api_model["outline_model"]
+    brief_model = api_model["brief_model"]
+    model_name, _, _ = resolve_model(outline_model)  # bare name for tiktoken/limits (chunking on outline stage)
     if not paths["whisper"].exists():
         raise FileNotFoundError(f"{paths['whisper']} Not Found.")
     with open(paths["whisper"], 'r', encoding='utf-8') as file:
@@ -171,7 +175,7 @@ def Text_Processing(payload):
         encoding = tiktoken.get_encoding("cl100k_base")
     outline_content = model_para["system_content"]["outline"] + model_para["system_content"]["additional"]
     outline_content_tokens = len(encoding.encode(outline_content))
-    max_input_tokens = model_limits(summarize_model)["max_input"]
+    max_input_tokens = model_limits(model_name)["max_input"]
     token_budget = max_input_tokens - outline_content_tokens - 64  # Leave margin
     if token_budget <= 0:
         raise ValueError("token_budget is non-positive.")
@@ -199,7 +203,7 @@ def Text_Processing(payload):
             resp, _ = summarizer_request_gpt(
                 temp_prompt,
                 "outline",
-                summarize_model,
+                outline_model,
             )
             outlines.append((tag + "\n" if tag else "") + resp)
 
@@ -211,7 +215,7 @@ def Text_Processing(payload):
         brief_text = paths["brief"].read_text(encoding="utf-8")
         headline_text = paths["headline"].read_text(encoding="utf-8")
     else:
-        raw = _subjective(outline_text, "brief", summarize_model)
+        raw = _subjective(outline_text, "brief", brief_model)
         headline_text, brief_text = _split_headline(raw)
         paths["headline"].write_text(headline_text, encoding="utf-8")
         paths["brief"].write_text(brief_text, encoding="utf-8")
@@ -220,7 +224,7 @@ def Text_Processing(payload):
     if paths["short"].exists():
         short_text = paths["short"].read_text(encoding="utf-8")
     else:
-        short_text = _subjective(brief_text, "short", summarize_model)
+        short_text = _subjective(brief_text, "short", brief_model)
         paths["short"].write_text(short_text, encoding="utf-8")
 
     return payload

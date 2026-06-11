@@ -5,6 +5,26 @@ Single source of truth for configurable fields.
 from __future__ import annotations
 from typing import Any, Dict, List
 
+# Curated "<provider>/<model>" options for the model dropdowns. The provider
+# prefix (before the first "/") selects which PROVIDERS row supplies key + URL;
+# the rest is the model name sent to that endpoint. Users may also type custom.
+MODEL_OPTIONS: List[str] = [
+    "openai/gpt-4o", "openai/gpt-4o-mini",
+    "openai/gpt-4.1", "openai/gpt-4.1-mini", "openai/gpt-4.1-nano", "openai/o3-mini",
+    "deepseek/deepseek-chat", "deepseek/deepseek-reasoner",
+    "gemini/gemini-2.5-flash", "gemini/gemini-2.5-pro", "gemini/gemini-2.0-flash",
+    "openrouter/anthropic/claude-3.5-sonnet",
+    "openrouter/meta-llama/llama-3.3-70b-instruct",
+]
+
+# Pre-seeded OpenAI-compatible endpoints; user just fills the api_key it needs.
+PROVIDER_SEED: List[Dict[str, str]] = [
+    {"id": "openai",     "base_url": "https://api.openai.com/v1/chat/completions",                       "api_key": ""},
+    {"id": "deepseek",   "base_url": "https://api.deepseek.com/chat/completions",                        "api_key": ""},
+    {"id": "gemini",     "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "api_key": ""},
+    {"id": "openrouter", "base_url": "https://openrouter.ai/api/v1/chat/completions",                    "api_key": ""},
+]
+
 SCHEMA: List[Dict[str, Any]] = [
     {
         "name": "Reading Language",
@@ -105,22 +125,40 @@ SCHEMA: List[Dict[str, Any]] = [
         "cn": "语音识别模型",
     },
     {
-        "name": "Summarize Model",
-        "key": "summarize_model",
-        "type": "select",
-        "default": "gpt-4.1-nano",
-        "choices": ["gpt-4.1-nano"],
-        "desc": "Summarize model (Unique)",
-        "cn": "总结模型 (唯一)",
+        "name": "Outline Model",
+        "key": "outline_model",
+        "type": "model",
+        "default": "openai/gpt-4.1-nano",
+        "options": MODEL_OPTIONS,
+        "desc": "Model for the outline stage (provider/model)",
+        "cn": "大纲模型（服务商/模型）",
+    },
+    {
+        "name": "Brief Model",
+        "key": "brief_model",
+        "type": "model",
+        "default": "openai/gpt-4.1-nano",
+        "options": MODEL_OPTIONS,
+        "desc": "Model for the brief + short stages (provider/model)",
+        "cn": "简报/短摘要模型（服务商/模型）",
+    },
+    {
+        "name": "Evolve Model",
+        "key": "evolve_model",
+        "type": "model",
+        "default": "openai/gpt-4.1-nano",
+        "options": MODEL_OPTIONS,
+        "desc": "Model for folding feedback into preferences (provider/model)",
+        "cn": "反馈进化模型（服务商/模型）",
     },
     {
         "name": "Translate Model",
         "key": "translate_model",
-        "type": "select",
-        "default": "gpt-4o-mini",
-        "choices": ["gpt-4o-mini", "gpt-4o"],
-        "desc": "Translate Model",
-        "cn": "翻译模型",
+        "type": "model",
+        "default": "openai/gpt-4o-mini",
+        "options": MODEL_OPTIONS,
+        "desc": "Model for translation / compression (provider/model)",
+        "cn": "翻译/压缩模型（服务商/模型）",
     },
     {
         "name": "COMPRESS_LEVEl",
@@ -131,24 +169,14 @@ SCHEMA: List[Dict[str, Any]] = [
         "desc": "Summary Text Volume Reduction % (Recommended: 100%)",
         "cn": "总结文本量压缩% (推荐100%)",
     },
-    # --- Secrets (config.txt) ---
+    # --- Secrets ---
     {
-        "name": "API Key",
-        "key": "API_KEY",
-        "type": "str",
-        "default": "",
-        "desc": "LLM API key",
-        "cn": "LLM API 密钥",
-        "group": "secrets",
-        "secret": True,
-    },
-    {
-        "name": "API URL",
-        "key": "API_URL",
-        "type": "str",
-        "default": "https://api.openai.com/v1/chat/completions",
-        "desc": "API endpoint URL",
-        "cn": "API 接口地址",
+        "name": "Providers",
+        "key": "PROVIDERS",
+        "type": "providers",
+        "default": PROVIDER_SEED,
+        "desc": "Per-provider endpoint + API key; the model prefix picks the provider",
+        "cn": "各服务商的接口地址与密钥；模型前缀决定用哪个服务商",
         "group": "secrets",
     },
     {
@@ -223,8 +251,24 @@ def _coerce(field: Dict[str, Any], value: Any) -> Any:
         if value not in field["choices"]:
             raise ValueError(f"{field['name']} must be one of {field['choices']}")
         return value
-    if ftype == "str":
-        return "" if value is None else str(value)
+    if ftype == "str" or ftype == "model":
+        return "" if value is None else str(value).strip()
+    if ftype == "providers":
+        if not isinstance(value, list):
+            return []
+        rows = []
+        for r in value:
+            if not isinstance(r, dict):
+                continue
+            pid = str(r.get("id") or "").strip()
+            if not pid:
+                continue
+            rows.append({
+                "id": pid,
+                "base_url": str(r.get("base_url") or "").strip(),
+                "api_key": str(r.get("api_key") or "").strip(),
+            })
+        return rows
     return value
 
 

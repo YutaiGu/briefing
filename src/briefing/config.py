@@ -74,6 +74,7 @@ SOURCE_URLS = []
 NTFY_SERVER = None
 api_info = {"api_key": "", "url_redirect": ""}
 api_model = None
+PROVIDERS = []
 
 if CONFIG_JSON.exists():
     try:
@@ -98,16 +99,30 @@ if CONFIG_JSON.exists():
     ENTRIES_LIMIT = f"1-{int(_cfg['ENTRIES_LIMIT'])}"  # "1-x"
     SOURCE_URLS = [str(x).strip() for x in _cfg.get("SOURCE_URLS", []) if str(x).strip()]
     NTFY_SERVER = _cfg.get("NTFY_SERVER") or None
-    api_info = {
-        "api_key": (_cfg.get("API_KEY") or "").strip(),
-        "url_redirect": (_cfg.get("API_URL") or "").strip(),
-    }
     api_model = {
         "whisper_model": _cfg["whisper_model"],
-        "summarize_model": _cfg["summarize_model"],
+        "outline_model": _cfg["outline_model"],
+        "brief_model": _cfg["brief_model"],
+        "evolve_model": _cfg["evolve_model"],
         "translate_model": _cfg["translate_model"],
     }
+    PROVIDERS = _cfg.get("PROVIDERS") or []
     CONFIG_LOADED = True
+
+
+def resolve_model(model_str):
+    """'<provider>/<model>' -> (model_name, api_key, base_url).
+
+    The prefix before the first '/' picks a PROVIDERS row for its key + URL; the
+    rest is the model name sent to that endpoint. Keys live only in providers.
+    """
+    s = (model_str or "").strip()
+    provider, sep, name = s.partition("/")
+    if not sep:
+        provider, name = None, s
+    row = next((p for p in PROVIDERS if p.get("id") == provider), None) if provider else None
+    row = row or {}
+    return name, row.get("api_key", ""), row.get("base_url", "")
 
 
 def require_config() -> None:

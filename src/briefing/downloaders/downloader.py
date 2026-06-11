@@ -5,6 +5,7 @@ import hashlib
 import json
 
 from briefing.config import AUDIO_DIR, ENTRIES_LIMIT, SOURCE_URLS, UPDATE_LIMIT, PENDING_FILE, COOKIES_TXT
+from briefing.cookies import _SilentLogger
 from briefing.db import Video, update_entries, init_entries, get_undownloaded, get_entries_by_ids, save_entries
 from . import douyin_downloader
 
@@ -105,6 +106,7 @@ def fetch_all_entries(source_url: str) -> list:
             "no_warnings": True,
             "playlist_items": ENTRIES_LIMIT,
             "extract_flat": True,
+            "logger": _SilentLogger(),
         }
 
         _android = {"extractor_args": {"youtube": {"player_client": ["android"]}}}
@@ -125,9 +127,9 @@ def fetch_all_entries(source_url: str) -> list:
                     info = ydl.extract_info(source_url, download=False)
                 if info:
                     break
-            except Exception as e:
-                print(e)
-        
+            except Exception:
+                continue
+
         if not info:
             return []
     except Exception as e:
@@ -221,6 +223,7 @@ def download_entry(entry: Video) -> bool:
             "preferredquality": "192",
         }],
         "outtmpl": outtmpl,
+        "logger": _SilentLogger(),
     }
 
     _android = {"extractor_args": {"youtube": {"player_client": ["android"]}}}
@@ -251,7 +254,6 @@ def download_entry(entry: Video) -> bool:
 
         except Exception as e:
             last_error = f"{type(e).__name__}: {e}"
-            print(e)
 
     entry.downloaded = 0
     entry.download_error = last_error or "download failed"

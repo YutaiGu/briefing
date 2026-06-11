@@ -11,8 +11,7 @@ Agent
 - [ ] outline: three-stage pipeline (split → per-section deep read → merge)
 - [ ] outline chunking: for long transcripts
 - [ ] self-evolution slow loop: prompt rewriting gated by feedback replay
-- [ ] domains
 
 - [x] prompt: put into a single file
 
-
+- [ ] specific test progress, do not need to whisper again

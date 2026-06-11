@@ -47,6 +47,14 @@
     select { appearance: none; -webkit-appearance: none; padding-right: 28px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%2366738A' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
     .sub-panel button { padding: 6px 12px; font-size: 12.5px; }
     .sub-panel .muted { font-size: 12px; }
+    .secret-row { grid-column: 1 / -1; display: flex; gap: 8px; align-items: flex-end; }
+    .secret-row > label { flex: 1 1 auto; min-width: 0; }
+    .secret-save { display: flex; align-items: center; gap: 8px; }
+    .providers { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; }
+    .prov-ctrl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .prov-sel { width: 150px; flex: none; }
+    .prov-ctrl > input { flex: 1 1 180px; min-width: 0; }
+    .prov-ctrl > button, .prov-ctrl > .fb-status { flex: none; }
     :is(input, select, textarea, button, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
     button { padding: 7px 14px; border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13.5px; font-family: var(--sans); }
@@ -58,11 +66,11 @@
     .muted { color: var(--muted); }
     .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-    .logbox { background: var(--surface-2); color: #45556B; border: 1px solid var(--line-soft); box-shadow: inset 0 1px 3px rgba(16,24,40,.05); padding: 12px 14px; border-radius: var(--radius-sm); max-height: 340px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: break-word; font-family: var(--mono); font-size: 12px; line-height: 1.65; user-select: text; cursor: text; }
+    .logbox { background: #11161D; color: #C5CDD8; border: 1px solid #1F2733; box-shadow: inset 0 1px 4px rgba(0,0,0,.35); padding: 12px 14px; border-radius: var(--radius-sm); max-height: 340px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: break-word; font-family: var(--mono); font-size: 12px; line-height: 1.65; user-select: text; cursor: text; }
     .logbox::-webkit-scrollbar { width: 8px; }
-    .logbox::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; }
+    .logbox::-webkit-scrollbar-thumb { background: #303B49; border-radius: 999px; }
     .logbox::-webkit-scrollbar-track { background: transparent; }
-    .logbox:empty::before { content: "No output yet — press Run to start."; color: var(--muted); }
+    .logbox:empty::before { content: "No output yet — press Run to start."; color: #5A6777; }
 
     /* settings */
     .settings-body { margin-top: 12px; display: grid; gap: 10px; }
@@ -190,8 +198,6 @@
             <summary>Secrets</summary>
             <div style="margin-top:12px;">
               <div id="secrets-grid" class="grid"></div>
-              <button id="save-secrets-btn" style="margin-top:12px;">Save Secrets</button>
-              <span id="secrets-status" class="muted"></span>
             </div>
           </details>
 
@@ -262,8 +268,6 @@
     const saveBtn = document.getElementById("save-btn");
     const saveStatus = document.getElementById("save-status");
     const secretsGrid = document.getElementById("secrets-grid");
-    const saveSecretsBtn = document.getElementById("save-secrets-btn");
-    const secretsStatus = document.getElementById("secrets-status");
     const channelsInput = document.getElementById("channels-input");
     const saveChannelsBtn = document.getElementById("save-channels-btn");
     const channelsStatus = document.getElementById("channels-status");
@@ -319,8 +323,83 @@
         if (f.group !== "secrets") return;
         const pathKey = f.key || f.name;
         const value = getValueByPath(config, pathKey);
-        secretsGrid.appendChild(fieldFromSchema(f, value));
+        if (f.type === "providers") {
+          secretsGrid.appendChild(providersBlock(f, value));
+        } else {
+          secretsGrid.appendChild(secretRow(f, value));
+        }
       });
+    }
+
+    function secretRow(f, value) {
+      const row = document.createElement("div");
+      row.className = "secret-row";
+      row.appendChild(fieldFromSchema(f, value));   // label+input; onchange updates config
+      const save = document.createElement("button");
+      save.type = "button"; save.textContent = "Save";
+      const status = document.createElement("span"); status.className = "fb-status";
+      save.onclick = async () => {
+        status.textContent = "Saving…";
+        const res = await fetch("/api/config", {
+          method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(config),
+        });
+        status.textContent = res.ok ? "Saved ✓" : "Failed";
+        setTimeout(() => { if (status.textContent === "Saved ✓") status.textContent = ""; }, 1500);
+      };
+      const right = document.createElement("div"); right.className = "secret-save";
+      right.append(save, status);
+      row.appendChild(right);
+      return row;
+    }
+
+    function providersBlock(f, value) {
+      const rows = Array.isArray(value) ? value.map(r => ({ ...r })) : [];
+      config.PROVIDERS = rows;
+
+      const block = document.createElement("div");
+      block.className = "providers";
+      const head = document.createElement("span");
+      head.className = "tip"; head.dataset.tip = tipFor(f); head.textContent = f.name;
+      block.appendChild(head);
+
+      const ctrl = document.createElement("div");
+      ctrl.className = "prov-ctrl";
+      block.appendChild(ctrl);
+
+      const sel = document.createElement("select"); sel.className = "prov-sel";
+      rows.forEach(r => { const o = document.createElement("option"); o.value = r.id; o.textContent = r.id; sel.appendChild(o); });
+      const urlInp = document.createElement("input"); urlInp.placeholder = "https://.../chat/completions";
+      const keyInp = document.createElement("input"); keyInp.type = "password"; keyInp.placeholder = "API key";
+      const saveB = document.createElement("button"); saveB.type = "button"; saveB.textContent = "Save";
+      const status = document.createElement("span"); status.className = "fb-status";
+
+      function load() {
+        const r = rows.find(x => x.id === sel.value) || {};
+        urlInp.value = r.base_url || "";
+        keyInp.value = r.api_key || "";
+        status.textContent = "";
+      }
+      sel.onchange = load;
+
+      saveB.onclick = async () => {
+        const r = rows.find(x => x.id === sel.value);
+        if (!r) return;
+        r.base_url = urlInp.value.trim();
+        r.api_key = keyInp.value.trim();
+        status.textContent = "Saving…";
+        const res = await fetch("/api/config", {
+          method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(config),
+        });
+        status.textContent = res.ok ? "Saved ✓" : "Failed";
+        setTimeout(() => { if (status.textContent === "Saved ✓") status.textContent = ""; }, 1500);
+      };
+
+      ctrl.append(sel, urlInp, keyInp, saveB, status);
+      if (rows.length) sel.value = rows[0].id;
+      load();
+      return block;
     }
 
     function renderChannels() {
@@ -350,7 +429,29 @@
       span.textContent = f.name;
       label.appendChild(span);
       let el;
-      if (f.type === "select") {
+      if (f.type === "model") {
+        el = document.createElement("select");
+        const opts = Array.isArray(f.options) ? f.options : [];
+        const cur = displayValue ?? "";
+        if (cur && !opts.includes(cur)) {           // preserve a custom / legacy value
+          const o = document.createElement("option");
+          o.value = cur; o.textContent = cur + "  (custom)"; o.selected = true;
+          el.appendChild(o);
+        }
+        const groups = {};
+        opts.forEach(o => { const p = o.split("/")[0]; (groups[p] ||= []).push(o); });
+        Object.entries(groups).forEach(([prov, models]) => {
+          const og = document.createElement("optgroup");
+          og.label = prov;
+          models.forEach(m => {
+            const o = document.createElement("option");
+            o.value = m; o.textContent = m.includes("/") ? m.split("/").slice(1).join("/") : m;
+            if (m === cur) o.selected = true;
+            og.appendChild(o);
+          });
+          el.appendChild(og);
+        });
+      } else if (f.type === "select") {
         el = document.createElement("select");
         const choices = Array.isArray(f.choices) ? f.choices : [];
         const selectedValue = choices.includes(displayValue) ? displayValue : (f.default ?? choices[0] ?? "");
@@ -432,23 +533,6 @@
         saveStatus.textContent = "Failed to save";
       }
       setTimeout(() => saveStatus.textContent = "", 1500);
-    };
-
-    saveSecretsBtn.onclick = async () => {
-      secretsStatus.textContent = "Saving...";
-      const res = await fetch("/api/config", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config)
-      });
-      if (res.ok) {
-        config = await res.json();
-        renderSecrets();
-        secretsStatus.textContent = "Saved";
-      } else {
-        secretsStatus.textContent = "Failed to save";
-      }
-      setTimeout(() => secretsStatus.textContent = "", 1500);
     };
 
     saveChannelsBtn.onclick = async () => {
