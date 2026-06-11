@@ -881,11 +881,28 @@
         const data = await loadReport(vid);
         reportModalBody.innerHTML = renderReport(vid, data);
         wireFeedback(reportModalBody, vid, data);
+        openReportVid = vid;
+        openReportStages = ["brief"];
+        if ((data.headline || "").trim()) openReportStages.unshift("headline");
+        if ((data.short || "").trim()) openReportStages.push("short");
       }
     });
 
-    reportModalClose.onclick = () => reportModal.classList.remove("show");
-    reportModal.onclick = (e) => { if (e.target === reportModal) reportModal.classList.remove("show"); };
+    // Closing the report = the user viewed it. Stages they didn't correct count as a pass.
+    let openReportVid = null, openReportStages = [];
+    function closeReport() {
+      if (openReportVid) {
+        fetch("/api/review", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ video_id: openReportVid, stages: openReportStages }),
+        }).catch(() => {});
+        openReportVid = null;
+      }
+      reportModal.classList.remove("show");
+    }
+    reportModalClose.onclick = closeReport;
+    reportModal.onclick = (e) => { if (e.target === reportModal) closeReport(); };
 
     // Human-facing labels, shown per READ_LANGUAGE
     const FB_TXT = {

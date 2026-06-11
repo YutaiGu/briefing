@@ -5,7 +5,7 @@ Version Compatibility
 - [x] db.py: Any change won't cause failed
 
 Model Compatibility
-- [ ] model_info: Any model will work with the latest model info
+- [x] model_info: Any model will work with the latest model info
 
 Agent
 - [ ] outline: three-stage pipeline (split → per-section deep read → merge)

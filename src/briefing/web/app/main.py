@@ -24,7 +24,7 @@ app.add_middleware(
 
 from briefing.config import STATIC_DIR, DB_PATH, OUTPUT_DIR, PROGRESS_DIR
 from sqlalchemy.orm import Session
-from briefing.db import engine, save_feedback, get_feedback_map
+from briefing.db import engine, save_feedback, get_feedback_map, Feedback
 
 BROWSER_URL = os.environ.get("RUNNER_URL", "http://localhost:8000/")
 AUTO_OPEN   = os.environ.get("AUTO_OPEN_BROWSER", "1") != "0"
@@ -235,4 +235,22 @@ def post_feedback(body: dict):
     output = src.read_text(encoding="utf-8").strip() if src.exists() else ""
     with Session(engine, future=True) as session:
         save_feedback(session, video_id, stage, output, opinion)
+    return {"ok": True}
+
+
+@app.post("/api/review")
+def post_review(body: dict):
+    # User closed the report (viewed it). Stages left without a correction count as
+    # a "pass" (empty opinion) and reinforce the rules that produced them.
+    video_id = (body.get("video_id") or "").strip()
+    stages = [s for s in (body.get("stages") or []) if s in ("headline", "brief", "short")]
+    if not video_id or not stages:
+        return {"ok": True}
+    with Session(engine, future=True) as session:
+        for stage in stages:
+            if session.get(Feedback, (video_id, stage)):
+                continue  # already has a correction or pass — don't overwrite
+            src = OUTPUT_DIR / video_id / f"{stage}.txt"
+            output = src.read_text(encoding="utf-8").strip() if src.exists() else ""
+            save_feedback(session, video_id, stage, output, "")  # empty opinion = pass
     return {"ok": True}

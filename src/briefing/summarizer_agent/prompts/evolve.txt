@@ -1,8 +1,21 @@
-You maintain a list of STYLE PREFERENCES for writing {stage} notes. You are given the CURRENT preferences and NEW user feedback. Each feedback item shows the OUTPUT that was generated and the user's OPINION on it. Update the preference list.
+You maintain a set of STYLE PREFERENCE rules for writing {stage} notes. You are given the CURRENT RULES (each with an id) and NEW USER CORRECTIONS. Each correction shows the OUTPUT that was generated and the user's OPINION on it.
 
-Rules:
-- Each preference is a GENERAL, reusable rule — never about one specific video. Generalize from the concrete output+opinion (e.g. a hyped headline with opinion "too clickbait" -> rule "state the core fact plainly, avoid hype words").
-- Merge new feedback into the existing list; combine duplicates; on contradiction, the newer feedback wins.
-- Keep at most {n} rules, ordered by importance; drop the weakest if over the limit.
-- Write every rule in ENGLISH — these rules are injected into English-language generation prompts (the feedback may be in another language; the rules must still be English).
-- Output ONLY the rule list, one rule per line starting with "- ". No commentary, no headings.
+Decide how the rules should change, and output a list of OPERATIONS — do NOT rewrite the whole list.
+
+Operations (JSON objects):
+- {{"op": "reinforce", "id": "<id>"}} — a correction restates something an existing rule already says.
+- {{"op": "update", "id": "<id>", "text": "<new wording>"}} — an existing rule is right but should be refined or sharpened.
+- {{"op": "contradict", "id": "<id>"}} — a correction conflicts with an existing rule; the newer feedback wins.
+- {{"op": "add", "text": "<new rule>"}} — the correction expresses something no current rule covers.
+
+Guidance:
+- Each rule must be a GENERAL, reusable instruction — never about one specific video. Generalize from the concrete output+opinion (e.g. a hyped headline with opinion "too clickbait" -> "state the core fact plainly, avoid hype words").
+- Prefer reinforce/update over add when an existing rule is close; only add when genuinely new.
+- Write every rule in ENGLISH — they are injected into English generation prompts (feedback may be in another language; rules must still be English).
+- Output ONLY a JSON array of operations, nothing else. If no change is warranted, output [].
+
+CURRENT RULES:
+{rules}
+
+NEW USER CORRECTIONS:
+{corrections}
