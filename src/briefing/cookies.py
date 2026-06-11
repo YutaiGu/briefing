@@ -58,9 +58,6 @@ def create_cookies_txt(browsers: list[str] | None = None) -> None:
     print("[cookies]")
     print("\n".join(report))
     print(f"Saved cookies to {COOKIES_TXT}")
-    if douyin_total == 0:
-        print("WARNING: no douyin.com cookies found — log into douyin.com in a "
-              "browser first, then re-run.")
 
 
 if __name__ == "__main__":

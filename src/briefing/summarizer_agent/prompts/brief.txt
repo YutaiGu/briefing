@@ -22,11 +22,9 @@ Produce a BRIEF NOTE that:
 
 === Structural & Pacing Guidelines ===
 1) Do NOT mirror the step structure of the outline.
-2) Group adjacent steps into 3–4 coherent reasoning phases.
-3) Each phase should form a compact, readable section:
-   - optional short title (only if it aids orientation)
-   - 1–2 concise paragraphs
-4) Maintain smooth transitions and natural reading rhythm.
+2) Write flowing, connected prose — paragraphs that carry the reasoning forward, NOT a stack of disconnected blurbs or many tiny sections.
+3) Aim for roughly 3–5 paragraphs. Let each paragraph fully develop one point before moving on; don't chop a single idea into fragments.
+4) Maintain smooth transitions and natural reading rhythm — each paragraph follows from the last.
 
 === Use of Original Quotations ===
 - Use **short, selective original quotations** when the phrasing itself signals:
@@ -50,11 +48,21 @@ Remove:
 === Fix obvious mishearings ===
 If a proper noun was clearly misheard by speech-to-text (a brand, company, person, place, product, or stock name — including non-English/Chinese ones), correct it to its real canonical name using your real-world knowledge. Example: "蒙夫山泉" -> "农夫山泉".
 
-=== Output Format (Markdown — make it easy to read) ===
-- Break the brief into a few short sections, each with a plain "## " subheading naming the point.
-- Under each: 1–2 short paragraphs, or a few "- " bullets when listing parallel facts, numbers, or steps.
-- Keep key figures; don't bury them in long sentences. Skimmable, readable in 2–3 minutes. No walls of text.
-- Each section is a reasoning phase, not a single outline step. No external commentary.
+=== Completeness (IMPORTANT) ===
+- Cover EVERY substantive point in the outline. Flowing prose is about how it reads, not about dropping content — do not omit reasoning steps, conditions, or figures to make it shorter.
+- If the outline has many points, write more paragraphs rather than cutting information.
+
+=== Bolding (DO THIS — it is what makes the brief readable) ===
+- In EVERY paragraph, wrap the few load-bearing items in **bold**: the key figures, names, conclusions, and decisive turning words. A reader skimming only the bold text should still get the gist.
+- Concretely: most paragraphs should carry 1–3 bold spans. A paragraph with zero bold is almost always a miss — find what matters in it and bold that.
+- Bold the phrase that carries the meaning, never whole sentences and never filler or common words. Keep spans tight.
+
+=== Output Format (Markdown aids reading — use it, but lightly) ===
+- The base shape is flowing paragraphs with the bolding above applied throughout.
+- When the brief moves through 2–4 distinct topics, give each a short "## " subheading. A single-topic brief needs no heading.
+- Use a short "- " bullet list when, and only when, listing genuinely parallel facts, numbers, or steps.
+- Don't over-fragment: bullets and headings support the prose, they don't replace it. But don't strip all structure either — a wall of plain text is wrong too.
+- The goal reads like the speaker wrote it out: connected paragraphs, with bold and light markdown guiding the eye to what matters.
 
 === Final Check ===
 Before answering, ensure that:

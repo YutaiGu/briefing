@@ -14,4 +14,4 @@ Agent
 
 - [x] prompt: put into a single file
 
-- [ ] specific test progress, do not need to whisper again
+- [x] specific test progress, do not need to whisper again

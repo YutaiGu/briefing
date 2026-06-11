@@ -7,7 +7,13 @@ from pathlib import Path
 import shutil
 import os, stat, time
 
-from briefing.config import DB_URL, AUDIO_DIR, OUTPUT_DIR, TEMPORARY_DIR, check_config, UPDATE_LIMIT
+from briefing.config import DB_URL, AUDIO_DIR, OUTPUT_DIR, TEMPORARY_DIR, check_config, UPDATE_LIMIT, ENTRIES_LIMIT
+
+# ENTRIES_LIMIT is the yt-dlp "1-x" string; the plain integer is the per-source keep count.
+try:
+    _ENTRIES_LIMIT_INT = int(str(ENTRIES_LIMIT).split("-")[-1])
+except Exception:
+    _ENTRIES_LIMIT_INT = 3
 
 engine = create_engine(DB_URL, future=True)
 Base = declarative_base()
@@ -129,7 +135,9 @@ def clean_all(session) -> None:
 ENTRY_TTL_DAYS = 7
 
 def clean_entries(session) -> int:
-    """Delete every entry older than ENTRY_TTL_DAYS (by inserted_at), with its audio file."""
+    """Delete entries older than ENTRY_TTL_DAYS AND ranked outside their source's
+    newest _ENTRIES_LIMIT_INT. Deleting a row still in the fetch window would just
+    re-pull it (dedup is by webpage_url)."""
     cutoff = datetime.now() - timedelta(days=ENTRY_TTL_DAYS)
     deleted = 0
     try:
@@ -138,20 +146,28 @@ def clean_entries(session) -> int:
         print(f"Error on clean_entries: {e}")
         return 0
 
+    by_source: dict[str, list] = {}
     for v in rows:
-        try:
-            ts = datetime.fromisoformat(v.inserted_at)
-        except Exception:
-            continue  # unparseable timestamp — leave it
-        if ts >= cutoff:
-            continue
-        delete_audio_by_path(v.file_path)  # best-effort; the file may already be gone
-        try:
-            session.delete(v)
-            session.commit()
-            deleted += 1
-        except Exception:
-            session.rollback()
+        by_source.setdefault(v.source or "", []).append(v)
+
+    for group in by_source.values():
+        group.sort(key=lambda x: x.inserted_at or "", reverse=True)
+        for rank, v in enumerate(group):
+            if rank < _ENTRIES_LIMIT_INT:
+                continue
+            try:
+                ts = datetime.fromisoformat(v.inserted_at)
+            except Exception:
+                continue
+            if ts >= cutoff:
+                continue
+            delete_audio_by_path(v.file_path)
+            try:
+                session.delete(v)
+                session.commit()
+                deleted += 1
+            except Exception:
+                session.rollback()
 
     return deleted
 

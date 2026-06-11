@@ -28,7 +28,7 @@
     }
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); }
-    .shell { max-width: 1280px; margin: 26px auto 48px; padding: 0 20px; display: grid; gap: 14px; }
+    .shell { width: 96%; margin: 26px auto 48px; padding: 0 clamp(12px, 2vw, 32px); display: grid; gap: 14px; box-sizing: border-box; }
     section { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); }
 
     /* section labels: one quiet uppercase voice everywhere */
@@ -149,6 +149,8 @@
     .md hr { border: none; border-top: 1px solid var(--line); margin: 12px 0; }
     .md blockquote { margin: 8px 0 10px; padding: 2px 12px; border-left: 3px solid var(--line); color: var(--muted); }
     .md, .short-block, #report-modal-body, .logbox { user-select: text; }
+    #report-modal-body .rsec { font-family: var(--serif); font-size: 15.5px; font-weight: 700; letter-spacing: .01em; color: var(--accent-deep); background: var(--accent-soft); border-left: 3px solid var(--accent); margin: 24px 0 12px; padding: 7px 14px; border-radius: 0 6px 6px 0; }
+    #report-modal-body .rsec:first-child { margin-top: 2px; }
 
     .tip { position: relative; display: inline-block; border-bottom: 1px dotted #B3BDCB; cursor: help; }
     .tip::after {
@@ -687,8 +689,9 @@
         groups.get(key).push(item);
       });
 
+      const cap = (config && Number(config.ENTRIES_LIMIT)) || 3;
       const groupedHtml = Array.from(groups.entries()).map(([sourceKey, rows]) => {
-        const entriesHtml = rows.map(renderItem).join("");
+        const entriesHtml = rows.slice(0, cap).map(renderItem).join("");
         return `
           <div class="report-group">
             <div class="report-group-head">${escapeHtml(cleanSource(sourceKey))}</div>
@@ -701,7 +704,7 @@
         ? `
           <div class="report-group">
             <div class="report-group-head">local</div>
-            <div class="report-local-items">${localItems.map(renderItem).join("")}</div>
+            <div class="report-local-items">${localItems.slice(0, cap).map(renderItem).join("")}</div>
           </div>
         `
         : "";
@@ -891,9 +894,9 @@
       const c = (data.content || "").trim();
       const r = (data.short || "").trim();
       let html = "";
-      if (h) html += `<h3>${fbt("headline")}</h3><div class="md">${renderMarkdown(h)}</div>` + fbBox("headline", fb.headline);
-      html += `<h3>${fbt("brief")}</h3><div class="md">${renderMarkdown(c)}</div>` + fbBox("brief", fb.brief);
-      if (r) html += `<h3>${fbt("short")}</h3><div class="short-block md">${renderMarkdown(r)}</div>` + fbBox("short", fb.short);
+      if (h) html += `<h3 class="rsec">${fbt("headline")}</h3><div class="md">${renderMarkdown(h)}</div>` + fbBox("headline", fb.headline);
+      html += `<h3 class="rsec">${fbt("brief")}</h3><div class="md">${renderMarkdown(c)}</div>` + fbBox("brief", fb.brief);
+      if (r) html += `<h3 class="rsec">${fbt("short")}</h3><div class="short-block md">${renderMarkdown(r)}</div>` + fbBox("short", fb.short);
       return html;
     }
 

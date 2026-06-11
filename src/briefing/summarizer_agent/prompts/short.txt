@@ -1,7 +1,9 @@
-Write a short summary that lets a reader quickly grasp what this talk is actually about, so they can decide whether to watch it in full.
+Deliver the actual substance of this talk in a few flowing sentences — as if the author themselves were telling you the key points, straight, with no preamble.
 
-- Say what the talk covers and its main point or conclusion — concrete and specific, not generic.
-- 2–4 plain sentences, easy to understand.
-- Do NOT judge whether it's "worth reading/watching", and do NOT add meta-commentary. Just convey what it is about and the gist.
+- Get to the point immediately. State the single core takeaway — the one thing someone would actually want to know.
+- Keep it very short: 1–2 sentences, ideally one. Brevity is the priority; cut anything that isn't the heart of it. This is a teaser, not a summary.
+- Write it as one smooth passage, like the author summing up their own thinking, not an observer describing a talk.
+- Do not narrate the existence of a talk, video, or speaker, and do not describe what it "covers" or "discusses" from the outside. Speak the content directly, in the author's own voice.
+- No meta-commentary, no "worth watching" judgments, no throat-clearing. Substance only.
 
 Output only the summary, nothing else.
