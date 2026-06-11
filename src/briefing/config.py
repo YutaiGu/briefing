@@ -55,37 +55,6 @@ model_para = {
     "presence_penalty": -0.2,
 }
 
-model_info = {
-    "gpt-4o-mini": {
-        "model": "gpt-4o-mini",
-        "max_input": 2048,
-        "max_output": 4096,
-        "input_price": 0,
-        "output_price": 0,
-    },
-    "gpt-3.5-turbo": {
-        "model": "gpt-3.5-turbo",
-        "max_input": 16385,
-        "max_output": 4096,
-        "input_price": 0.0035,
-        "output_price": 0.0035,
-    },
-    "gpt-4o": {
-        "model": "gpt-4o",
-        "max_input": 10000,
-        "max_output": 16384,
-        "input_price": 0.0175,
-        "output_price": 0.0175,
-    },
-    "gpt-4.1-nano": {
-        "model": "gpt-4.1-nano",
-        "max_input": 1000000,
-        "max_output": 32000,
-        "input_price": 0.0028,
-        "output_price": 0.0028,
-    },
-}
-
 # Config values from config.json. Missing file is non-fatal at import;
 # worker startup calls require_config() to fail with a clear message.
 CONFIG_LOADED = False

@@ -1,12 +1,11 @@
-from datetime import datetime
-import requests
 import tiktoken
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
 
-from briefing.config import api_info, model_info, model_para, api_model, OUTPUT_DIR
+from briefing.config import model_para, api_model, OUTPUT_DIR
 from briefing.config import SUMMARIZER_LIMIT, POOL_NUM
 from briefing.db import get_unsummarized, update_entries, entry_to_payload, payload_to_entry
+from briefing.llm import completion, completion_cost, model_limits
 
 # per-process LLM usage accumulator, reset per video in one_summarizer
 _usage = {"tokens": 0, "cost": 0.0}
@@ -44,73 +43,32 @@ def summarizer(session) -> None:
             update_entries(session, [payload_to_entry(updated)])
 
 def request_gpt(input, system_content, model):
-    '''
-    request chatgpt
-
-    response_json = {
-        'id': 'chatcmpl-A46En6R7booB25ShmyYf4VT4EEoSG',
-        'object': 'chat.completion',
-        'created': 1725540653,
-        'model': 'gpt-4o-mini-2024-07-18',
-        'choices': [{
-            'index': 0,
-            'message': {
-                'role': 'assistant',
-                'content': '...'},
-                'logprobs': None,
-                'finish_reason': 'stop'}],
-        'usage': {
-            'prompt_tokens': 1324,
-            'completion_tokens': 348,
-            'total_tokens': 1672},
-        'system_fingerprint': 'fp_f33667828e'}
-    '''
+    """One LLM call via the router; accumulates tokens/cost into _usage."""
     if not model:
         raise ValueError("model is required")
 
-    api_key = api_info["api_key"]
+    messages = [
+        {"role": "system", "content": system_content},
+        {"role": "user", "content": input},
+    ]
     try:
-        encoding = tiktoken.encoding_for_model(model_info[model]["model"])
-    except KeyError:
-        encoding = tiktoken.get_encoding("cl100k_base")
-
-    payload = {
-        "model": model_info[model]["model"],
-        "messages": [
-            {"role": "system",
-             "content": system_content},
-            {"role": "user",
-             "content": input},
-        ],
-        "temperature": model_para["temperature"],
-        "presence_penalty": model_para["presence_penalty"],
-        "max_tokens": model_info[model]["max_output"],
-    }
-
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-
-    try:
-        response = requests.post(
-            api_info["url_redirect"], 
-            json = payload, 
-            headers = headers,
-            timeout=(20, 120),  # Connection timeout: 10s, Read timeout 120s
+        response_json = completion(
+            model=model,
+            messages=messages,
+            temperature=model_para["temperature"],
+            presence_penalty=model_para["presence_penalty"],
+            max_tokens=model_limits(model)["max_output"],
         )
     except Exception as e:
         print(f"[gpt] request failed: {type(e).__name__}")
         raise
 
-    response_json = response.json()
     if response_json.get("error") is not None:
         print("request_gpt error:", response_json)
-    cost = (model_info[model]["input_price"]*response_json['usage']['prompt_tokens']+model_info[model]["output_price"]*response_json['usage']['completion_tokens'])/1000
 
     try:
-        _usage["tokens"] += int(response_json['usage']['total_tokens'])
-        _usage["cost"] += cost
+        _usage["tokens"] += int(response_json["usage"]["total_tokens"])
+        _usage["cost"] += completion_cost(response_json)
     except Exception:
         pass
 
@@ -131,8 +89,6 @@ def summarizer_request_gpt(input, which_system, model):
         raise ValueError("model is required")
     if not which_system:
         raise ValueError("which_system is required")
-    if model not in model_info:
-        raise ValueError(f"unknown model: {model}")
     if which_system not in model_para["system_content"]:
         raise ValueError(f"unknown system prompt: {which_system}")
 
@@ -159,16 +115,31 @@ def _subjective(input_text, stage, model):
     return resp["choices"][0]["message"]["content"]
 
 def _split_headline(raw):
-    """Split brief output 'HEADLINE: x\\n---\\n<body>' -> (headline, body)."""
-    headline, body = "", raw
-    if raw:
-        lines = raw.splitlines()
-        first = lines[0] if lines else ""
-        if first.strip().upper().startswith("HEADLINE:"):
-            headline = first.split(":", 1)[1].strip()
-            parts = raw.split("---", 1)
-            body = parts[1].strip() if len(parts) == 2 else "\n".join(lines[1:]).strip()
-    return headline, body
+    """Pull (headline, body) from the brief output, tolerant of format drift.
+
+    The model is asked for 'HEADLINE: x\\n---\\nbody' but sometimes writes the
+    headline as '# x' or drops the markers. Recover when a '---' separator or a
+    HEADLINE: label is present; otherwise treat the whole text as the body.
+    """
+    text = (raw or "").strip()
+    if not text:
+        return "", ""
+
+    head, sep, rest = text.partition("---")
+    if sep and rest.strip():
+        line = next((l for l in head.splitlines() if l.strip()), "")
+        body = rest.strip()
+    else:
+        first = text.splitlines()[0]
+        if not first.strip().lstrip("#*> ").upper().startswith("HEADLINE:"):
+            return "", text  # no headline structure — keep the body whole
+        line = first
+        body = "\n".join(text.splitlines()[1:]).strip()
+
+    line = line.strip().lstrip("#*> ").strip()
+    if line.upper().startswith("HEADLINE:"):
+        line = line.split(":", 1)[1]
+    return line.strip(" *`"), body
 
 def Text_Processing(payload):
     file_name = Path(payload['file_path']).stem
@@ -187,7 +158,7 @@ def Text_Processing(payload):
         "short": WORK_DIR / "short.txt",
     }
     summarize_model = api_model["summarize_model"]
-    model_name = model_info[summarize_model]["model"]
+    model_name = summarize_model
     if not paths["whisper"].exists():
         raise FileNotFoundError(f"{paths['whisper']} Not Found.")
     with open(paths["whisper"], 'r', encoding='utf-8') as file:
@@ -200,7 +171,7 @@ def Text_Processing(payload):
         encoding = tiktoken.get_encoding("cl100k_base")
     outline_content = model_para["system_content"]["outline"] + model_para["system_content"]["additional"]
     outline_content_tokens = len(encoding.encode(outline_content))
-    max_input_tokens = model_info[summarize_model]["max_input"]
+    max_input_tokens = model_limits(summarize_model)["max_input"]
     token_budget = max_input_tokens - outline_content_tokens - 64  # Leave margin
     if token_budget <= 0:
         raise ValueError("token_budget is non-positive.")

@@ -14,3 +14,5 @@ Agent
 - [ ] domains
 
 - [ ] prompt: put into a single file
+- [ ] enforce output format: model drifts from `HEADLINE: x \n --- \n body` (writes `# x` / drops it), headline gets lost and markers leak into the brief — needs structured output / retry, not just tolerant parsing
+

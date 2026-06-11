@@ -88,6 +88,9 @@ hiddenimports = [
     # briefing package — web app loaded via uvicorn string "briefing.web.app.main:app"
     "briefing",
     "briefing.config",
+    "briefing.llm",
+    "briefing.llm.router",
+    "briefing.llm.pricing",
     "briefing.db",
     "briefing.cookies",
     "briefing.transcriber",

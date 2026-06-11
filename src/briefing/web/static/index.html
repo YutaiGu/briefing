@@ -521,7 +521,7 @@
                 <span class="report-meta">${date}</span>
                 ${statusHtml(item)}
                 <span style="margin-left:auto;display:flex;gap:6px;">
-                  ${headlineMd ? `<button class="report-open btn-toggle" data-vid="${vid}">Brief ${expanded ? "▴" : "▾"}</button>` : ""}
+                  ${canOpen ? `<button class="report-open btn-toggle" data-vid="${vid}">Brief ${expanded ? "▴" : "▾"}</button>` : ""}
                   ${canOpen ? `<button class="report-open btn-report" data-vid="${vid}">Report</button>` : ""}
                 </span>
               </div>

@@ -15,6 +15,7 @@
 # source package tree
 !src/
 !src/briefing/
+!src/briefing/llm/
 !src/briefing/downloaders/
 !src/briefing/summarizer_agent/
 !src/briefing/summarizer_agent/prompts/
