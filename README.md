@@ -27,10 +27,10 @@ This enables you to quickly grasp the **core viewpoints and high-frequency insig
 | 📺 **YouTube** | Supported | Automatic |
 | 📺 **Bilibili** | Supported | Automatic |
 | 🎵 **TikTok** | Supported | Automatic |
+| 💬 **Douyin** | Supported | Automatic (via [f2](https://github.com/Johnserf-Seed/f2)) |
 | 📡 **Live Stream Recordings** | Supported via external tool [DouyinLiveRecorder](https://github.com/ihmily/DouyinLiveRecorder) | [See below for details](#12-external-downloader-compatibility) |
 | 📕 **Xiaohongshu** | In development | |
 | 📕 **Instagram** | In development | |
-| 💬 **Douyin** | In development | |
 | 📖 **Reddit** | In development | |
 
 ### 1.2 External Downloader Compatibility
@@ -39,6 +39,24 @@ This project is compatible with external downloaders.
 
 Put audio files in the `briefing/data/audio` directory, or set the downloader’s output directory to `briefing/data/audio`.  
 The system will automatically detect and process them.
+
+### 1.3 Multiple Model Support
+
+| Provider | Support |
+|--------|--------|
+| 🤖 **OpenAI** | Supported |
+| 🐳 **DeepSeek** | Supported |
+| ♊ **Gemini** | Supported |
+| 🔀 **OpenRouter** | Supported |
+| ✨ **More** | On the way |
+
+![Multiple Model Support](images/6.png)
+
+### 1.4 Self-Evolving Summaries
+
+Leave a quick note on any report and the summary style **learns from your feedback**, getting closer to how you like it over time.
+
+![Self-Evolving Summaries](images/7.png)
 
 ---
 
@@ -77,6 +95,8 @@ This project relies on external APIs for:
 * Content summarization
 * Translation
 * Text compression
+
+![5](images/5.png)
 
 Official OpenAI documentation:
 
