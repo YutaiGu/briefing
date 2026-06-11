@@ -52,6 +52,21 @@ def price(model: str) -> dict:
     }
 
 
+def _fmt(x: float) -> str:
+    return (f"{x:.2f}".rstrip("0").rstrip(".")) or "0"
+
+
+def price_label(model: str) -> str:
+    """'$in / $out' per 1M tokens for a 'provider/model' option, or '' if unknown."""
+    for k in (model, model.split("/", 1)[-1], model.split("/")[-1]):
+        row = _PRICES.get(k)
+        if row:
+            i = (row.get("input_cost_per_token") or 0.0) * 1_000_000
+            o = (row.get("output_cost_per_token") or 0.0) * 1_000_000
+            return f"${_fmt(i)} / ${_fmt(o)}" if (i or o) else ""
+    return ""
+
+
 def model_limits(model: str) -> dict:
     """Chunk/output budgets: input = 90% of context, output = model max."""
     row = _PRICES.get(model) or {}

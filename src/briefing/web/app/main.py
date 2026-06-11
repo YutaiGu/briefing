@@ -68,7 +68,13 @@ def put_config(cfg: dict):
 
 @app.get("/api/schema")
 def get_config_schema():
-    return {"fields": get_schema()}
+    from briefing.llm import price_label
+    fields = []
+    for f in get_schema():
+        if f.get("type") == "model":
+            f = {**f, "prices": {opt: price_label(opt) for opt in (f.get("options") or [])}}
+        fields.append(f)
+    return {"fields": fields}
 
 
 @app.post("/api/run")

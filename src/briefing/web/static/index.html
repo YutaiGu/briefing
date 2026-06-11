@@ -45,6 +45,8 @@
     input, select, textarea { width: 100%; min-width: 0; height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); font: inherit; font-size: 13.5px; background: var(--surface); color: var(--ink); }
     textarea { height: auto; padding: 8px 10px; }
     select { appearance: none; -webkit-appearance: none; padding-right: 28px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%2366738A' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+    select.model-sel { font-family: var(--mono); font-size: 12.5px; }
+    select.model-sel option { font-family: var(--mono); }
     .sub-panel button { padding: 6px 12px; font-size: 12.5px; }
     .sub-panel .muted { font-size: 12px; }
     .secret-row { grid-column: 1 / -1; display: flex; gap: 8px; align-items: flex-end; }
@@ -411,7 +413,12 @@
 
     function tipFor(f) {
       // single-language tooltip, following READ_LANGUAGE
-      return fbLang() === "zh" ? (f.cn || f.desc || "") : (f.desc || f.cn || "");
+      let t = fbLang() === "zh" ? (f.cn || f.desc || "") : (f.desc || f.cn || "");
+      if (f.type === "model") {
+        t += fbLang() === "zh" ? "（价格 = 输入 / 输出，单位 $ / 每百万 tokens）"
+                               : " (price = input / output, $ per 1M tokens)";
+      }
+      return t;
     }
 
     function updateChannelsLabel() {
@@ -433,8 +440,18 @@
       let el;
       if (f.type === "model") {
         el = document.createElement("select");
+        el.className = "model-sel";
         const opts = Array.isArray(f.options) ? f.options : [];
+        const prices = f.prices || {};
         const cur = displayValue ?? "";
+        const disp = m => m.includes("/") ? m.split("/").slice(1).join("/") : m;
+        const maxName = Math.max(0, ...opts.map(m => disp(m).length));
+        const maxPrice = Math.max(0, ...opts.map(m => (prices[m] || "").length));
+        const NBSP = String.fromCharCode(160);  // option collapses normal spaces; pad with NBSP
+        const rowText = m => {
+          const pr = prices[m] || "";
+          return pr ? disp(m).padEnd(maxName + 2, NBSP) + pr.padStart(maxPrice, NBSP) : disp(m);
+        };
         if (cur && !opts.includes(cur)) {           // preserve a custom / legacy value
           const o = document.createElement("option");
           o.value = cur; o.textContent = cur + "  (custom)"; o.selected = true;
@@ -447,7 +464,7 @@
           og.label = prov;
           models.forEach(m => {
             const o = document.createElement("option");
-            o.value = m; o.textContent = m.includes("/") ? m.split("/").slice(1).join("/") : m;
+            o.value = m; o.textContent = rowText(m);
             if (m === cur) o.selected = true;
             og.appendChild(o);
           });
