@@ -17,7 +17,7 @@
     button[disabled] { opacity: 0.5; cursor: not-allowed; }
     .muted { color: #6b7280; }
     .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .logbox { background: #111; color: #0f0; padding: 12px; border-radius: 8px; max-height: 340px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: break-word; font-family: "Cascadia Code", Consolas, monospace; }
+    .logbox { background: #111; color: #0f0; padding: 12px; border-radius: 8px; max-height: 340px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: break-word; font-family: "Cascadia Code", Consolas, monospace; user-select: text; cursor: text; }
     .reportbox { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 14px; padding: 4px; }
     .report-group { background: #ffffff; border: 1px solid #dbe4f0; border-radius: 12px; padding: 12px; box-shadow: 0 4px 14px rgba(15,23,42,0.06); }
     .report-group-head { font-size: 13px; color: #1f2937; margin-bottom: 10px; padding: 8px 10px; border-left: 4px solid #0ea5e9; background: #f0f9ff; border-radius: 8px; font-weight: 700; }
@@ -96,46 +96,51 @@
     }
     .tip:hover::after { opacity: 1; transform: translateY(0); }
     .cn { font-size: 12px; color: #4b5563; line-height: 1.2; }
+    .settings-body { margin-top: 12px; display: grid; gap: 10px; }
+    .sub-panel { border: 1px solid #e2e5ec; border-radius: 8px; padding: 10px 12px; background: #fafbfd; }
+    .sub-panel > summary { cursor: pointer; font-weight: 600; font-size: 14px; color: #1c1f23; }
   </style>
+  <script src="/static/marked.min.js"></script>
+  <script src="/static/purify.min.js"></script>
 </head>
 <body>
   <div class="shell">
-    <header>
-      <h2>Briefing Panel</h2>
-    </header>
 
     <section>
-      <details id="cfg-accordion">
-        <summary style="cursor:pointer;font-weight:600;">Config Panel</summary>
-        <div style="margin-top:12px;">
-          <div id="config-grid" class="grid"></div>
-          <button id="save-btn" style="margin-top:12px;">Save Config</button>
-          <span id="save-status" class="muted"></span>
-        </div>
-      </details>
-    </section>
+      <details id="settings-accordion">
+        <summary style="cursor:pointer;font-weight:600;">Settings</summary>
+        <div class="settings-body">
 
-    <section>
-      <details id="secrets-accordion">
-        <summary style="cursor:pointer;font-weight:600;">Secrets</summary>
-        <div style="margin-top:12px;">
-          <div id="secrets-grid" class="grid"></div>
-          <button id="save-secrets-btn" style="margin-top:12px;">Save Secrets</button>
-          <span id="secrets-status" class="muted"></span>
-        </div>
-      </details>
-    </section>
+          <details id="cfg-accordion" class="sub-panel">
+            <summary>Config</summary>
+            <div style="margin-top:12px;">
+              <div id="config-grid" class="grid"></div>
+              <button id="save-btn" style="margin-top:12px;">Save Config</button>
+              <span id="save-status" class="muted"></span>
+            </div>
+          </details>
 
-    <section>
-      <details id="channels-accordion">
-        <summary style="cursor:pointer;font-weight:600;">Channels</summary>
-        <div style="margin-top:12px;">
-          <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;">
-            <span id="channels-label" class="tip" data-tip="">Source Urls</span>
-            <textarea id="channels-input" style="min-height:140px;padding:8px;border:1px solid #cfd5e0;border-radius:6px;font-family:monospace;"></textarea>
-          </label>
-          <button id="save-channels-btn" style="margin-top:12px;">Save Channels</button>
-          <span id="channels-status" class="muted"></span>
+          <details id="secrets-accordion" class="sub-panel">
+            <summary>Secrets</summary>
+            <div style="margin-top:12px;">
+              <div id="secrets-grid" class="grid"></div>
+              <button id="save-secrets-btn" style="margin-top:12px;">Save Secrets</button>
+              <span id="secrets-status" class="muted"></span>
+            </div>
+          </details>
+
+          <details id="channels-accordion" class="sub-panel">
+            <summary>Channels</summary>
+            <div style="margin-top:12px;">
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:14px;">
+                <span id="channels-label" class="tip" data-tip="">Source Urls</span>
+                <textarea id="channels-input" style="min-height:140px;padding:8px;border:1px solid #cfd5e0;border-radius:6px;font-family:monospace;"></textarea>
+              </label>
+              <button id="save-channels-btn" style="margin-top:12px;">Save Channels</button>
+              <span id="channels-status" class="muted"></span>
+            </div>
+          </details>
+
         </div>
       </details>
     </section>
@@ -414,8 +419,13 @@
       if (skipFirstLog) { logbox.textContent = ""; skipFirstLog = false; return; }
       const res = await fetch("/api/log?tail=4000");
       const data = await res.json();
-      logbox.textContent = data.log || "";
-      logbox.scrollTop = logbox.scrollHeight;
+      const text = data.log || "";
+      if (text === logbox.textContent) return;  // unchanged: keep scroll & selection
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && logbox.contains(sel.anchorNode)) return;  // user is copying
+      const atBottom = logbox.scrollHeight - logbox.scrollTop - logbox.clientHeight < 8;
+      logbox.textContent = text;
+      if (atBottom) logbox.scrollTop = logbox.scrollHeight;  // follow only when already at bottom
     }
 
     function escapeHtml(s) {
@@ -423,33 +433,7 @@
     }
 
     function renderMarkdown(src) {
-      const inline = (t) => escapeHtml(t)
-        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-        .replace(/`([^`]+)`/g, "<code>$1</code>");
-      const lines = (src || "").replace(/\r\n/g, "\n").split("\n");
-      const out = [];
-      let listType = null, para = [], inCode = false, code = [];
-      const flushPara = () => { if (para.length) { out.push(`<p>${para.map(inline).join("<br>")}</p>`); para = []; } };
-      const closeList = () => { if (listType) { out.push(`</${listType}>`); listType = null; } };
-      for (const raw of lines) {
-        if (/^\s*```/.test(raw)) {
-          if (inCode) { out.push(`<pre><code>${escapeHtml(code.join("\n"))}</code></pre>`); code = []; inCode = false; }
-          else { flushPara(); closeList(); inCode = true; }
-          continue;
-        }
-        if (inCode) { code.push(raw); continue; }
-        const line = raw.trimEnd();
-        let m;
-        if (/^\s*$/.test(line)) { flushPara(); closeList(); continue; }
-        if ((m = line.match(/^(#{1,3})\s+(.+)$/))) { flushPara(); closeList(); out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`); continue; }
-        if ((m = line.match(/^\s*[-*]\s+(.+)$/))) { flushPara(); if (listType !== "ul") { closeList(); out.push("<ul>"); listType = "ul"; } out.push(`<li>${inline(m[1])}</li>`); continue; }
-        if ((m = line.match(/^\s*\d+[.)]\s+(.+)$/))) { flushPara(); if (listType !== "ol") { closeList(); out.push("<ol>"); listType = "ol"; } out.push(`<li>${inline(m[1])}</li>`); continue; }
-        closeList();
-        para.push(line);
-      }
-      if (inCode && code.length) out.push(`<pre><code>${escapeHtml(code.join("\n"))}</code></pre>`);
-      flushPara(); closeList();
-      return out.join("\n");
+      return DOMPurify.sanitize(marked.parse(src || "", { breaks: true }));
     }
 
     function cleanSource(s) {
