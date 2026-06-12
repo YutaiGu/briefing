@@ -157,7 +157,8 @@ def evolve(session, model: str) -> None:
                     for i, fb in enumerate(items)
                 )
                 system = _EVOLVE_PROMPT.format(stage=stage, rules=rules_block, corrections=block)
-                resp = request_gpt("Produce the operations.", system, model)
+                from briefing.summarizer_agent.validators import check_evolve
+                resp = request_gpt("Produce the operations.", system, model, check=check_evolve)
                 _apply_ops(rules, _parse_ops(resp["choices"][0]["message"]["content"]))
             if passes.get(stage):
                 _reinforce(rules, passes[stage])

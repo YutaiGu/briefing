@@ -57,7 +57,7 @@ def create_cookies_txt(browsers: list[str] | None = None) -> None:
     douyin_total = sum(1 for c in merged if "douyin.com" in (c.domain or ""))
     print("[cookies]")
     print("\n".join(report))
-    print(f"Saved cookies to {COOKIES_TXT}")
+    print(f"Saved cookies to {COOKIES_TXT}\n")
 
 
 if __name__ == "__main__":

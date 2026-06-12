@@ -5,6 +5,7 @@ from datetime import datetime
 from briefing.config import api_model, READ_LANGUAGE, OUTPUT_DIR, NTFY_SERVER, COMPRESS_LEVEl, REPORT_DIR, PUSH_TO, load_prompt
 from briefing.db import get_unpushed, update_entries
 from briefing.summarizer_agent import request_gpt
+from briefing.summarizer_agent.validators import check_translate
 
 _TRANSLATE_TMPL = load_prompt("translate")
 _ENGLISH = ("en", "en-us", "english", "English")
@@ -54,14 +55,14 @@ def translate_text(input: str, language: str) -> str:
     if language in _ENGLISH:
         return _no_translate(input)
     system = _TRANSLATE_TMPL.format(language=language, compress="")
-    return request_gpt(input, system, api_model["translate_model"])
+    return request_gpt(input, system, api_model["translate_model"], check=check_translate)
 
 def translate_and_compress(input: str, language: str):
     if language in _ENGLISH and COMPRESS_LEVEl == 100:
         return _no_translate(input)
     target = "English" if language in _ENGLISH else language
     system = _TRANSLATE_TMPL.format(language=target, compress=_compress_clause())
-    return request_gpt(input, system, api_model["translate_model"])
+    return request_gpt(input, system, api_model["translate_model"], check=check_translate)
 
 def pusher(session, limit: int) -> None:
     todo = get_unpushed(session, limit)

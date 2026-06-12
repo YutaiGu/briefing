@@ -42,38 +42,49 @@ def summarizer(session) -> None:
                 continue
             update_entries(session, [payload_to_entry(updated)])
 
-def request_gpt(input, system_content, model):
-    """One LLM call via the router; accumulates tokens/cost into _usage."""
+def request_gpt(input, system_content, model, check=None, retries=2):
+    """One LLM call via the router; accumulates tokens/cost into _usage.
+    With `check(text) -> (ok, error)`, retries up to `retries` times on rejection."""
     if not model:
         raise ValueError("model is required")
 
     name, key, base = resolve_model(model)
-    messages = [
-        {"role": "system", "content": system_content},
-        {"role": "user", "content": input},
-    ]
-    try:
-        response_json = completion(
-            model=name,
-            messages=messages,
-            api_key=key,
-            api_base=base,
-            temperature=model_para["temperature"],
-            presence_penalty=model_para["presence_penalty"],
-            max_tokens=model_limits(name)["max_output"],
-        )
-    except Exception as e:
-        print(f"[gpt] request failed: {type(e).__name__}")
-        raise
+    note = ""
+    response_json = None
+    for _ in range(retries + 1):
+        try:
+            response_json = completion(
+                model=name,
+                messages=[
+                    {"role": "system", "content": system_content + note},
+                    {"role": "user", "content": input},
+                ],
+                api_key=key,
+                api_base=base,
+                temperature=model_para["temperature"],
+                presence_penalty=model_para["presence_penalty"],
+                max_tokens=model_limits(name)["max_output"],
+            )
+        except Exception as e:
+            print(f"[gpt] request failed: {type(e).__name__}")
+            raise
 
-    if response_json.get("error") is not None:
-        print("request_gpt error:", response_json)
+        if response_json.get("error") is not None:
+            print("request_gpt error:", response_json)
 
-    try:
-        _usage["tokens"] += int(response_json["usage"]["total_tokens"])
-        _usage["cost"] += completion_cost(response_json)
-    except Exception:
-        pass
+        try:
+            _usage["tokens"] += int(response_json["usage"]["total_tokens"])
+            _usage["cost"] += completion_cost(response_json)
+        except Exception:
+            pass
+
+        if check is None:
+            return response_json
+        ok, err = check(response_json["choices"][0]["message"]["content"])
+        if ok:
+            return response_json
+        note = f"\n\nYour previous answer was rejected: {err}. Output again, follow the format exactly. Output only the result."
+        print(f"[LLM Retry] {err}")
 
     return response_json
 
@@ -109,12 +120,13 @@ def summarizer_request_gpt(input, which_system, model):
 
 def _subjective(input_text, stage, model):
     """Generate a subjective stage, injecting that stage's learned preferences."""
-    from briefing.summarizer_agent import evolve
+    from briefing.summarizer_agent import evolve, validators
     system = model_para["system_content"][stage] + model_para["system_content"]["additional"]
     notes = evolve.load_notes(stage)
     if notes:
         system += f"\n\n=== Learned style preferences (follow these) ===\n{notes}"
-    resp = request_gpt(input_text, system, model)
+    check = {"brief": validators.check_brief, "short": validators.check_short}.get(stage)
+    resp = request_gpt(input_text, system, model, check=check)
     return resp["choices"][0]["message"]["content"]
 
 def _split_headline(raw):
