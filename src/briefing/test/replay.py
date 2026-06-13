@@ -36,7 +36,7 @@ def list_entries(session) -> None:
         print("No transcribed entries.")
         return
     for v in rows:
-        print(f"{v.video_id}  sum={v.summarized} push={v.pushed}  {(v.title or '')[:60]}")
+        print(f"{v.video_id}    {(v.title or '')[:60]}")
 
 
 def reset_entry(session, v: Video) -> bool:

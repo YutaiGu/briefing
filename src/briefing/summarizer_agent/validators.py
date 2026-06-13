@@ -5,6 +5,15 @@ import re
 _EVOLVE_OPS = {"add", "reinforce", "update", "contradict"}
 
 
+def normalize_bold(text):
+    """`**"x"**` -> `"**x**"` so quote-adjacent bold still renders in CommonMark."""
+    if not text:
+        return text
+    for o, c in (("“", "”"), ('"', '"'), ("'", "'"), ("‘", "’")):
+        text = re.sub(rf"\*\*{re.escape(o)}(.+?){re.escape(c)}\*\*", rf"{o}**\1**{c}", text)
+    return text
+
+
 def _check_markdown(text):
     idxs = [m.start() for m in re.finditer(r"\*\*", text)]
     if len(idxs) % 2 != 0:

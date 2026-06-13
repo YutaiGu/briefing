@@ -5,5 +5,6 @@ Deliver the actual substance of this talk in a few flowing sentences — as if t
 - Write it as one smooth passage, like the author summing up their own thinking, not an observer describing a talk.
 - Do not narrate the existence of a talk, video, or speaker, and do not describe what it "covers" or "discusses" from the outside. Speak the content directly, in the author's own voice.
 - No meta-commentary, no "worth watching" judgments, no throat-clearing. Substance only.
+- Write in ENGLISH, regardless of the input's language — keep proper nouns (companies, people, places, products, stock names/tickers) in their original language and spelling.
 
 Output only the summary, nothing else.

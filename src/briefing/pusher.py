@@ -5,7 +5,7 @@ from datetime import datetime
 from briefing.config import api_model, READ_LANGUAGE, OUTPUT_DIR, NTFY_SERVER, COMPRESS_LEVEl, REPORT_DIR, PUSH_TO, load_prompt
 from briefing.db import get_unpushed, update_entries
 from briefing.summarizer_agent import request_gpt
-from briefing.summarizer_agent.validators import check_translate
+from briefing.summarizer_agent.validators import check_translate, normalize_bold
 
 _TRANSLATE_TMPL = load_prompt("translate")
 _ENGLISH = ("en", "en-us", "english", "English")
@@ -109,6 +109,8 @@ def pusher(session, limit: int) -> None:
                     short = translate_text(short_src, READ_LANGUAGE)['choices'][0]['message']['content']
                 except Exception:
                     short = short_src
+
+            content, headline, short = normalize_bold(content), normalize_bold(headline), normalize_bold(short)
 
             (vid_dir / "report.json").write_text(
                 json.dumps({"content": content, "headline": headline, "short": short}, ensure_ascii=False, indent=2),

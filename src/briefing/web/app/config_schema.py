@@ -65,10 +65,10 @@ SCHEMA: List[Dict[str, Any]] = [
         "cn": "最大总结条数/次"
     },
     {
-        "name": "Push Limit", 
-        "key": "PUSHER_LIMIT", 
-        "type": "int", "default": 3, "min": 1, "max": 20, 
-        "desc": "Push jobs per run", 
+        "name": "Push Limit",
+        "key": "PUSHER_LIMIT",
+        "type": "int_optional", "default": None, "min": 1, "max": 20,
+        "desc": "Max push number per run",
         "cn": "最大推送条数/次"
     },
     {

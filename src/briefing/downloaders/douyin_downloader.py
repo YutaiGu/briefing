@@ -268,6 +268,23 @@ def _ms_to_sec(raw) -> int | None:
         return None
 
 
+def _create_ts(item) -> int:
+    """Epoch seconds for sorting newest-first. Handles f2's epoch ints and its
+    '2026-03-29 02-28-24' string (time also uses '-'). Unknown -> 0 (sorts last)."""
+    raw = item.get("create_time") or item.get("createTime")
+    if raw in (None, ""):
+        return 0
+    try:
+        if isinstance(raw, (int, float)) or str(raw).isdigit():
+            return int(raw)
+        date_part, _, time_part = str(raw).strip().partition(" ")
+        y, m, d = (date_part.split("-") + ["1", "1", "1"])[:3]
+        hh, mm, ss = (time_part.split("-") + ["0", "0", "0"])[:3]
+        return int(datetime(int(y), int(m), int(d), int(hh), int(mm), int(ss)).timestamp())
+    except Exception:
+        return 0
+
+
 # --------------------------------------------------------------------------- #
 # public: list a homepage's recent posts
 # --------------------------------------------------------------------------- #
@@ -277,44 +294,46 @@ async def _afetch_homepage_entries(source_url: str, limit: int) -> list[dict]:
     sec_uid = await SecUserIdFetcher.get_sec_user_id(source_url)
     handler = _handler()
 
-    # `limit` is the only knob. f2's max_counts isn't a hard cap (it finishes the
-    # current page, waits ~20s, then fetches another), so instead we consume only
-    # the FIRST page and break — breaking the async-for closes the generator
-    # before its inter-page sleep/next request runs. Result: exactly ONE request.
-    entries: list[dict] = []
+    # Pinned (is_top, cap 3) posts come first and can be old; pull limit+3 in one
+    # request (break after page 1), then sort by create_time and keep newest `limit`.
+    fetch_n = limit + 3
+    raw_items: list = []
     async for page in handler.fetch_user_post_videos(
-        sec_uid, page_counts=limit, max_counts=limit
+        sec_uid, page_counts=fetch_n, max_counts=fetch_n
     ):
-        for item in _to_list(page):
-            aweme_id = (
-                item.get("aweme_id")
-                or item.get("awemeId")
-                or item.get("aweme_id_str")
-            )
-            if not aweme_id:
-                continue
-            webpage_url = f"https://www.douyin.com/video/{aweme_id}"
-            video_id = _make_video_id(webpage_url)
-            title = item.get("desc_raw") or item.get("desc") or item.get("title") or aweme_id
+        raw_items = _to_list(page)
+        break
 
-            # Stash the fresh direct URL so the download phase can skip the API.
-            cache_put(video_id, _find_play_url(item))
+    entries: list[dict] = []
+    for item in raw_items:
+        aweme_id = (
+            item.get("aweme_id")
+            or item.get("awemeId")
+            or item.get("aweme_id_str")
+        )
+        if not aweme_id:
+            continue
+        webpage_url = f"https://www.douyin.com/video/{aweme_id}"
+        entries.append({
+            "source": source_url,
+            "extractor": "douyin",
+            "upload_date": _fmt_upload_date(item.get("create_time") or item.get("createTime")),
+            "duration": _ms_to_sec(item.get("video_duration")),
+            "language": None,
+            "title": item.get("desc_raw") or item.get("desc") or item.get("title") or aweme_id,
+            "webpage_url": webpage_url,
+            "video_id": _make_video_id(webpage_url),
+            "_ts": _create_ts(item),
+            "_play": _find_play_url(item),
+        })
 
-            entries.append({
-                "source": source_url,
-                "extractor": "douyin",
-                "upload_date": _fmt_upload_date(
-                    item.get("create_time") or item.get("createTime")
-                ),
-                "duration": _ms_to_sec(item.get("video_duration")),
-                "language": None,
-                "title": title,
-                "webpage_url": webpage_url,
-                "video_id": video_id,
-            })
-        break  # first page only -> one request, no inter-page wait
+    entries.sort(key=lambda e: e["_ts"], reverse=True)
+    entries = entries[:limit]
+    for e in entries:
+        cache_put(e["video_id"], e.pop("_play"))
+        e.pop("_ts", None)
 
-    return entries[:limit]
+    return entries
 
 
 def fetch_homepage_entries(source_url: str, limit: int) -> list[dict]:
