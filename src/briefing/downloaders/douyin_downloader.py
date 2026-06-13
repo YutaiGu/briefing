@@ -124,11 +124,11 @@ def _load_cookie() -> str:
         try:
             jar = MozillaCookieJar()
             jar.load(str(cookies_txt), ignore_discard=True, ignore_expires=True)
-            parts = [
-                f"{c.name}={c.value}"
-                for c in jar
-                if "douyin.com" in (c.domain or "")
-            ]
+            douyin = [c for c in jar if "douyin.com" in (c.domain or "")]
+            auth = [c for c in douyin if c.name in ("sessionid", "sessionid_ss", "sid_guard")]
+            if not auth or all(c.is_expired() for c in auth):
+                print("[douyin] WARNING: login cookies missing/expired")
+            parts = [f"{c.name}={c.value}" for c in douyin]
             if parts:
                 return "; ".join(parts)
         except Exception:
@@ -458,21 +458,21 @@ if __name__ == "__main__":
 
     cmd = sys.argv[1]
     if cmd == "keys" and len(sys.argv) >= 3:
-        # Dump the raw field names/values of the first homepage post, so we can
-        # see exactly what f2 0.0.1.7 returns (date / duration / direct url ...).
+        n = int(sys.argv[3]) if len(sys.argv) >= 4 else 3
         async def _dump(url):
             from f2.apps.douyin.utils import SecUserIdFetcher
             sec_uid = await SecUserIdFetcher.get_sec_user_id(url)
             handler = _handler()
             async for page in handler.fetch_user_post_videos(
-                sec_uid, page_counts=20, max_counts=1
+                sec_uid, page_counts=n, max_counts=n
             ):
-                items = _to_list(page)
-                if items:
-                    print(json.dumps(items[0], ensure_ascii=False, indent=2, default=str))
-                    return
-            print("no items")
-        _run(_dump(sys.argv[2]))
+                return _to_list(page)
+            return []
+        items = _run(_dump(sys.argv[2]))
+        for i, it in enumerate(items):
+            ct = it.get("create_time") or it.get("createTime")
+            print(f"[{i}] ts={_create_ts(it)} create_time={ct!r} | {(it.get('desc') or '')[:32]}")
+        print(f"-- {len(items)} posts --")
     elif cmd == "video" and len(sys.argv) >= 3:
         url = sys.argv[2]
         d = _run(_aresolve_direct_url(url))
