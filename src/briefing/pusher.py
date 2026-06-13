@@ -68,7 +68,6 @@ def pusher(session, limit: int) -> None:
     todo = get_unpushed(session, limit)
     if not todo:
         return
-    print("Sending...")
 
     parts = []
     for v in todo:
@@ -79,7 +78,6 @@ def pusher(session, limit: int) -> None:
             if not brief_path.exists():
                 continue
             
-            print(f"[Packing] {v.video_id}")
             upload_date = v.upload_date or v.downloaded_at or v.inserted_at or ""
             extractor = v.extractor or ""
             source = (v.source or "").replace("https://www.", "").replace("http://www.", "")
@@ -93,7 +91,6 @@ def pusher(session, limit: int) -> None:
             headline_src = (vid_dir / "headline.txt").read_text(encoding="utf-8").strip() if (vid_dir / "headline.txt").exists() else ""
             short_src = (vid_dir / "short.txt").read_text(encoding="utf-8").strip() if (vid_dir / "short.txt").exists() else ""
 
-            print(f"[Translating] {v.video_id}")
             try:
                 content = translate_and_compress(text, READ_LANGUAGE)['choices'][0]['message']['content']
             except Exception:
@@ -145,6 +142,5 @@ def pusher(session, limit: int) -> None:
             update_entries(session, todo)
         elif target != "LocalFile":
             pushto_localfile(body)
-        print(f"Finished Sending")
     except Exception:
         return

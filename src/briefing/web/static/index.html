@@ -84,6 +84,7 @@
     table.progress { width: 100%; border-collapse: collapse; font-size: 13px; }
     table.progress th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
     table.progress th.num, table.progress td.num { text-align: right; font-family: var(--mono); font-size: 12.5px; }
+    .zero-bad { color: var(--err); font-weight: 700; }
     table.progress td { padding: 8px 10px; border-bottom: 1px solid var(--line-soft); }
     table.progress tbody tr:hover { background: var(--surface-2); }
     table.progress td.title { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
@@ -789,8 +790,10 @@
       const rows = all.map(it => {
         const id = it.video_id || "";
         const shortId = id.length > 12 ? id.slice(0, 12) + "…" : id;
-        const cost = it.cost ? `$${Number(it.cost).toFixed(4)}` : "";
-        const tokens = it.tokens ? it.tokens.toLocaleString() : "";
+        const done = it.summarize === "done";
+        const cell = (val, fmt) => val ? fmt(val) : (done ? `<span class="zero-bad">${fmt(0)}</span>` : "");
+        const tokens = cell(it.tokens, n => Number(n).toLocaleString());
+        const cost = cell(it.cost, n => `$${Number(n).toFixed(4)}`);
         return `<tr class="${it._justDone ? "done-row" : ""}">
           <td class="title" title="${(it.title || "").replace(/"/g, "&quot;")}">${it.title || shortId}</td>
           <td>${progressCell(it.download)}</td>

@@ -24,6 +24,8 @@
 !src/briefing/web/app/
 !src/briefing/web/static/
 !src/briefing/web/static/**
+!src/briefing/test/
+!src/briefing/test/*.py
 
 # bundled assets
 !assets/

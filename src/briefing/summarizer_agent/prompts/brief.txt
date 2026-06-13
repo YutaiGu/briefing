@@ -56,6 +56,7 @@ If a proper noun was clearly misheard by speech-to-text (a brand, company, perso
 - In EVERY paragraph, wrap the few load-bearing items in **bold**: the key figures, names, conclusions, and decisive turning words. A reader skimming only the bold text should still get the gist.
 - Concretely: most paragraphs should carry 1–3 bold spans. A paragraph with zero bold is almost always a miss — find what matters in it and bold that.
 - Bold the phrase that carries the meaning, never whole sentences and never filler or common words. Keep spans tight.
+- Write bold cleanly: `**word**` with NO spaces just inside the `**`, every `**` paired and closed, and never wrap a lone symbol or punctuation (no `** word **`, no unclosed `**`, no `**%**`).
 
 === Output Format (Markdown aids reading — use it, but lightly) ===
 - The base shape is flowing paragraphs with the bolding above applied throughout.

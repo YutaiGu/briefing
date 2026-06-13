@@ -5,16 +5,31 @@ import re
 _EVOLVE_OPS = {"add", "reinforce", "update", "contradict"}
 
 
+def _check_markdown(text):
+    idxs = [m.start() for m in re.finditer(r"\*\*", text)]
+    if len(idxs) % 2 != 0:
+        return False, "unbalanced '**': every bold must be opened and closed"
+    for i in range(0, len(idxs), 2):
+        inner = text[idxs[i] + 2: idxs[i + 1]]
+        if not inner.strip():
+            return False, "empty '**' bold; remove it or put real text inside"
+        if inner[0].isspace() or inner[-1].isspace():
+            return False, "no space just inside '**': write '**word**', never '** word **'"
+        if not re.search(r"[^\W_]", inner):
+            return False, "don't bold a lone symbol; bold real words only"
+    return True, ""
+
+
 def check_short(text, src=""):
     if not text.strip():
         return False, "empty output"
-    return True, ""
+    return _check_markdown(text)
 
 
 def check_translate(text, src=""):
     if not text.strip():
         return False, "empty output"
-    return True, ""
+    return _check_markdown(text)
 
 
 def check_brief(text):
@@ -26,7 +41,7 @@ def check_brief(text):
         return False, "headline/body boundary is wrong: output one short 'HEADLINE:' line, then a '---' line, then the body — nothing else"
     if not body:
         return False, "the brief body after the headline is empty"
-    return True, ""
+    return _check_markdown(text)
 
 
 def check_evolve(text):

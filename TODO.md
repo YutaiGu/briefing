@@ -1,4 +1,4 @@
 # TODO
 
-- []: LLM Schema Validation
-- []: Auto migration
+- [x]: LLM Schema Validation
+- [ ]: Auto migration
