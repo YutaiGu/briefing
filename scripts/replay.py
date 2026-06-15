@@ -5,12 +5,18 @@ outputs while keeping whisper.txt. Does NOT run anything — the worker picks
 the entries up on its next pass.
 
 Run (in the conda env):
-    python -m briefing.test.replay --list          # show finished entries
-    python -m briefing.test.replay <video_id> ...  # reset specific entries
-    python -m briefing.test.replay --all           # reset every transcribed entry
+    python scripts/replay.py --list          # show finished entries
+    python scripts/replay.py <video_id> ...  # reset specific entries
+    python scripts/replay.py --all           # reset every transcribed entry
 """
 
+import os
 import sys
+
+# Make the src-layout package importable when run without `pip install -e .`.
+_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src")
+if os.path.isdir(_SRC) and _SRC not in sys.path:
+    sys.path.insert(0, _SRC)
 
 from sqlalchemy.orm import Session
 
