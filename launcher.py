@@ -94,12 +94,40 @@ def main() -> None:
         sys.exit(1)
 
     import webview
-    webview.create_window(
+
+    class _JsApi:
+        window = None
+
+        def export_backup(self):
+            try:
+                from briefing.web.app.runner import runner
+                if runner.is_running():
+                    return {"error": "Stop the worker before exporting."}
+            except Exception:
+                pass
+            from datetime import datetime
+            from pathlib import Path
+            from briefing.migration import export_bytes
+            save_mode = getattr(getattr(webview, "FileDialog", None), "SAVE", None) or webview.SAVE_DIALOG
+            result = self.window.create_file_dialog(
+                save_mode,
+                save_filename=f"briefing-backup-{datetime.now():%Y%m%d-%H%M%S}.zip",
+                file_types=("Zip archive (*.zip)",),
+            )
+            if not result:
+                return {"cancelled": True}
+            path = result if isinstance(result, str) else result[0]
+            Path(path).write_bytes(export_bytes())
+            return {"path": path}
+
+    api = _JsApi()
+    api.window = webview.create_window(
         "Briefing",
         f"http://127.0.0.1:{port}",
         width=1440,
         height=960,
         min_size=(900, 600),
+        js_api=api,
     )
     # Blocks until the window is closed; daemon server thread exits with the process.
     webview.start(gui="edgechromium")

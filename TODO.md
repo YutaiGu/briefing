@@ -1,5 +1,5 @@
 # TODO
 
 - [x]: LLM Schema Validation
-- [ ]: Auto migration
+- [x]: Auto migration
 - [ ]: Use create time
