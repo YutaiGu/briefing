@@ -130,7 +130,11 @@ def main() -> None:
         js_api=api,
     )
     # Blocks until the window is closed; daemon server thread exits with the process.
-    webview.start(gui="edgechromium")
+    # EdgeChromium is Windows-only; on macOS/Linux let pywebview pick the native backend.
+    if sys.platform == "win32":
+        webview.start(gui="edgechromium")
+    else:
+        webview.start()
     sys.exit(0)
 
 

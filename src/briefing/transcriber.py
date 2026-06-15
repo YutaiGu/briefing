@@ -7,7 +7,7 @@ import contextlib
 #from moviepy import AudioFileClip
 from multiprocessing import Pool, cpu_count
 
-from briefing.config import api_model, TRANSCRIBER_LIMIT, POOL_NUM, OUTPUT_DIR, TEMPORARY_DIR, PROGRESS_DIR
+from briefing.config import api_model, TRANSCRIBER_LIMIT, POOL_NUM, OUTPUT_DIR, TEMPORARY_DIR, PROGRESS_DIR, FFMPEG_BIN
 from briefing.db import get_untranscribed, update_entries, entry_to_payload, payload_to_entry
 
 _MODEL = None
@@ -53,9 +53,9 @@ def transcriber(session) -> None:
             update_entries(session, [payload_to_entry(updated)])
 
 def check_whisper_model() -> None:
-    # 1) ensure ffmpeg is available
-    if not shutil.which("ffmpeg"):
-        raise RuntimeError("ffmpeg not found in PATH")
+    # 1) ensure ffmpeg is available (bundled via imageio-ffmpeg)
+    if not FFMPEG_BIN:
+        raise RuntimeError("ffmpeg not available (imageio-ffmpeg missing)")
     
     # 2) ensure whisper is available
     model_name = api_model["whisper_model"]

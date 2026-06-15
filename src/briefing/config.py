@@ -1,14 +1,20 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from pathlib import Path
 
 # Paths — frozen-aware, no side effects (safe to import before config.json exists).
 if getattr(sys, "frozen", False):
-    BASE_DIR = Path(sys.executable).resolve().parent
     PKG_DIR = Path(sys._MEIPASS) / "briefing"
     ASSETS_DIR = Path(sys._MEIPASS) / "assets"
+    if sys.platform == "darwin":
+        # A macOS .app must not write inside its own bundle (read-only / breaks on
+        # update), so keep user data in the standard Application Support folder.
+        BASE_DIR = Path.home() / "Library" / "Application Support" / "Briefing"
+    else:
+        BASE_DIR = Path(sys.executable).resolve().parent
 else:
     PKG_DIR = Path(__file__).resolve().parent             # src/briefing
     BASE_DIR = PKG_DIR.parents[1]                         # repo root
@@ -28,8 +34,18 @@ DB_URL = f"sqlite:///{DB_PATH.as_posix()}"
 
 # read-only bundled assets
 PROMPT_DIR = PKG_DIR / "summarizer_agent" / "prompts"
-FFMPEG_DIR = ASSETS_DIR / "ffmpeg"
 STATIC_DIR = PKG_DIR / "web" / "static"
+
+def _resolve_ffmpeg() -> str:
+    """ffmpeg binary from imageio-ffmpeg (ships the right static binary per OS)."""
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return ""
+
+FFMPEG_BIN = _resolve_ffmpeg()
+FFMPEG_DIR = Path(FFMPEG_BIN).parent if FFMPEG_BIN else (ASSETS_DIR / "ffmpeg")
 
 # writable: evolving per-domain/per-stage style preferences
 PREFERENCES_DIR = DATA_DIR / "preferences"

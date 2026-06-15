@@ -29,11 +29,6 @@
 !scripts/
 !scripts/*.py
 
-# bundled assets
-!assets/
-!assets/ffmpeg/
-!assets/ffmpeg/**
-
 # images
 !images/
 !images/**
