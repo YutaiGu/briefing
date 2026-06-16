@@ -1,11 +1,4 @@
-numpy
-requests[socks]
-tiktoken
-yt-dlp
-f2==0.0.1.7
-sqlalchemy
-pyinstaller
-fastapi
-uvicorn[standard]
-pywebview
-faster-whisper
+# Dependencies live in pyproject.toml (single source of truth).
+# Runtime:         pip install -r requirements.txt   (same as  pip install -e .)
+# With build tool: pip install -e .[build]           (adds pyinstaller)
+-e .

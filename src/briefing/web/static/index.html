@@ -218,6 +218,19 @@
             </div>
           </details>
 
+          <details id="migration-accordion" class="sub-panel">
+            <summary>Migration</summary>
+            <div style="margin-top:12px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
+              <button id="export-btn">Export backup</button>
+              <button id="import-btn" type="button">Import backup…</button>
+              <input id="import-file" type="file" accept=".zip" hidden>
+              <span id="migration-status" class="muted"></span>
+            </div>
+            <div class="muted" style="margin-top:8px;font-size:12px;">
+              Back up or restore all data. Stop the worker before importing.
+            </div>
+          </details>
+
         </div>
       </details>
     </section>
@@ -572,6 +585,44 @@
         channelsStatus.textContent = "Failed to save";
       }
       setTimeout(() => { saveStatus.textContent = ""; channelsStatus.textContent = ""; }, 1500);
+    };
+
+    const migrationStatus = document.getElementById("migration-status");
+    document.getElementById("export-btn").onclick = async () => {
+      migrationStatus.textContent = "Exporting…";
+      // Desktop window: native "save as" dialog lets you pick the path.
+      if (window.pywebview && window.pywebview.api && window.pywebview.api.export_backup) {
+        try {
+          const r = await window.pywebview.api.export_backup();
+          migrationStatus.textContent = r.cancelled ? "" : (r.error || (r.path ? `Saved: ${r.path}` : "Export failed"));
+        } catch (_) { migrationStatus.textContent = "Export failed"; }
+        return;
+      }
+      // Browser fallback: server writes to a default location.
+      try {
+        const res = await fetch("/api/migration/export");
+        const r = await res.json().catch(() => ({}));
+        migrationStatus.textContent = res.ok ? `Saved: ${r.path}` : (r.detail || "Export failed");
+      } catch (_) { migrationStatus.textContent = "Export failed"; }
+    };
+    const importFile = document.getElementById("import-file");
+    document.getElementById("import-btn").onclick = () => importFile.click();
+    importFile.onchange = async () => {
+      const file = importFile.files[0];
+      if (!file) return;
+      migrationStatus.textContent = "Importing…";
+      try {
+        const res = await fetch("/api/migration/import", { method: "POST", body: file });
+        if (res.ok) {
+          const r = await res.json();
+          migrationStatus.textContent = `Restored ${r.restored} files — reloading…`;
+          setTimeout(() => location.reload(), 1200);
+        } else {
+          const e = await res.json().catch(() => ({}));
+          migrationStatus.textContent = e.detail || "Import failed";
+        }
+      } catch (_) { migrationStatus.textContent = "Import failed"; }
+      importFile.value = "";
     };
 
     runBtn.onclick = async () => {

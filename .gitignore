@@ -24,13 +24,10 @@
 !src/briefing/web/app/
 !src/briefing/web/static/
 !src/briefing/web/static/**
-!src/briefing/test/
-!src/briefing/test/*.py
 
-# bundled assets
-!assets/
-!assets/ffmpeg/
-!assets/ffmpeg/**
+# dev scripts (synced across machines, not packaged)
+!scripts/
+!scripts/*.py
 
 # images
 !images/

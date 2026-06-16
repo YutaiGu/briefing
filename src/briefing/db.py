@@ -163,6 +163,7 @@ def clean_entries(session) -> int:
                 continue
             delete_audio_by_path(v.file_path)
             try:
+                session.query(Feedback).filter(Feedback.video_id == v.video_id).delete()
                 session.delete(v)
                 session.commit()
                 deleted += 1

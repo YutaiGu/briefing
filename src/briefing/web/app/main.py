@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -96,6 +96,27 @@ def stop_run():
 @app.get("/api/status")
 def status():
     return runner.status()
+
+
+@app.get("/api/migration/export")
+def migration_export():
+    if runner.is_running():
+        raise HTTPException(status_code=409, detail="Stop the worker before exporting.")
+    from briefing.migration import export_to_file
+    p = export_to_file()
+    return {"path": str(p), "name": p.name}
+
+
+@app.post("/api/migration/import")
+async def migration_import(request: Request):
+    if runner.is_running():
+        raise HTTPException(status_code=409, detail="Stop the worker before importing.")
+    from briefing.migration import import_bytes
+    body = await request.body()
+    try:
+        return import_bytes(body)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.get("/api/progress")

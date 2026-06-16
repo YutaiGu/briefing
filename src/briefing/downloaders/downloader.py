@@ -4,7 +4,7 @@ from http.cookiejar import MozillaCookieJar
 import hashlib
 import json
 
-from briefing.config import AUDIO_DIR, ENTRIES_LIMIT, SOURCE_URLS, UPDATE_LIMIT, PENDING_FILE, COOKIES_TXT
+from briefing.config import AUDIO_DIR, ENTRIES_LIMIT, SOURCE_URLS, UPDATE_LIMIT, PENDING_FILE, COOKIES_TXT, FFMPEG_BIN
 from briefing.cookies import _SilentLogger
 from briefing.db import Video, update_entries, init_entries, get_undownloaded, get_entries_by_ids, save_entries
 from . import douyin_downloader
@@ -235,6 +235,7 @@ def download_entry(entry: Video) -> bool:
         }],
         "outtmpl": outtmpl,
         "logger": _SilentLogger(),
+        "ffmpeg_location": FFMPEG_BIN,
     }
 
     _android = {"extractor_args": {"youtube": {"player_client": ["android"]}}}

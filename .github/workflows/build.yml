@@ -1,4 +1,4 @@
-name: Build Windows EXE
+name: Build
 
 on:
   push:
@@ -10,7 +10,13 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+          - os: macos-latest      # Apple Silicon (arm64)
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout source
@@ -25,23 +31,35 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -e . --no-deps
+          pip install -e .[build]
 
       - name: Build with PyInstaller
         run: pyinstaller briefing.spec --noconfirm
 
-      - name: Verify output
+      # ---------- Windows ----------
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
         run: |
           if (!(Test-Path "dist\briefing\briefing.exe")) {
-            Write-Error "briefing.exe not found — build failed"
-            exit 1
+            Write-Error "briefing.exe not found — build failed"; exit 1
           }
-        shell: pwsh
+          Compress-Archive -Path dist\briefing -DestinationPath "dist\briefing-${{ github.ref_name }}-windows.zip"
 
-      - name: Create ZIP archive
-        run: Compress-Archive -Path dist\briefing -DestinationPath dist\briefing-${{ github.ref_name }}-windows.zip
-        shell: pwsh
+      # ---------- macOS ----------
+      - name: Sign and package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          test -d "dist/Briefing.app" || { echo "Briefing.app not found — build failed"; exit 1; }
+          # Strip resource forks / xattrs that break ad-hoc codesign, then sign so the
+          # app can run on Apple Silicon (unsigned arm64 binaries are killed as "damaged").
+          ditto --norsrc --noextattr "dist/Briefing.app" "dist/_clean.app"
+          rm -rf "dist/Briefing.app"
+          mv "dist/_clean.app" "dist/Briefing.app"
+          codesign --force --deep --sign - "dist/Briefing.app"
+          codesign --verify --deep --strict --verbose=2 "dist/Briefing.app"
+          hdiutil create -volname "Briefing" -srcfolder "dist/Briefing.app" \
+            -ov -format UDZO "dist/briefing-${{ github.ref_name }}-macos.dmg"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -50,8 +68,16 @@ jobs:
           body: |
             ## Download
 
-            1. Download `briefing-${{ github.ref_name }}-windows.zip`
-            2. Extract to any folder (e.g. `C:\briefing\`)
-            3. Run `briefing.exe` — the browser panel opens automatically
-            4. Open the **Secrets** panel and fill in your API Key, API URL, and NTFY Server, then save
-          files: dist/briefing-${{ github.ref_name }}-windows.zip
+            **Windows** — `briefing-${{ github.ref_name }}-windows.zip`
+            1. Extract to any folder (e.g. `C:\briefing\`)
+            2. Run `briefing.exe` — the panel opens automatically
+
+            **macOS (Apple Silicon)** — `briefing-${{ github.ref_name }}-macos.dmg`
+            1. Open the `.dmg` and drag **Briefing** to Applications
+            2. First launch: right-click **Briefing** → **Open** → **Open**
+               (the app is unsigned; or run `xattr -dr com.apple.quarantine /Applications/Briefing.app`)
+
+            Then open the **Secrets** panel and fill in your API Key, API URL, and NTFY Server, and save.
+          files: |
+            dist/briefing-${{ github.ref_name }}-windows.zip
+            dist/briefing-${{ github.ref_name }}-macos.dmg
