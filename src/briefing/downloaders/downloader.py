@@ -70,6 +70,17 @@ def make_video_id(webpage_url: str) -> str:
     # 16-char id for webpage url
     return hashlib.sha1(webpage_url.encode("utf-8")).hexdigest()[:16]
 
+def _time_format_ytdlp(info) -> str | None:
+    """yt-dlp publish time (timestamp epoch / upload_date YYYYMMDD) -> 'YYYY-MM-DD HH:MM:SS'."""
+    ts = info.get("timestamp") or info.get("release_timestamp")
+    if ts:
+        try:
+            return datetime.fromtimestamp(int(ts)).isoformat(sep=" ", timespec="seconds")
+        except Exception:
+            return None
+    ud = str(info.get("upload_date") or info.get("release_date") or "")
+    return f"{ud[:4]}-{ud[4:6]}-{ud[6:8]} 00:00:00" if len(ud) == 8 and ud.isdigit() else None
+
 def fetch_all_entries(source_url: str) -> list:
     '''
     Fetch and normalize video entries from a source URL.
@@ -157,7 +168,7 @@ def fetch_all_entries(source_url: str) -> list:
         entry = {
             "source": source_url,
             "extractor": e.get("extractor") or e.get("extractor_key"),
-            "upload_date": e.get("upload_date"),
+            "upload_date": None,  # yt-dlp flat list has no publish time; set at download
             "duration": e.get("duration"),
             "language": e.get("language"),
             "title": e.get("title"),
@@ -241,12 +252,13 @@ def download_entry(entry: Video) -> bool:
             with YoutubeDL({**ydl_opts, **extra}) as ydl:
                 if inject:
                     _inject(ydl)
-                ydl.extract_info(entry.webpage_url, download=True)
+                info = ydl.extract_info(entry.webpage_url, download=True)
             if out_path.exists():
                 entry.downloaded = 1
                 entry.downloaded_at = datetime.now().isoformat(timespec="seconds")
                 entry.file_path = str(out_path)
                 entry.download_error = None
+                entry.upload_date = _time_format_ytdlp(info or {})
                 return entry
 
             # ffmpeg did not create MP3

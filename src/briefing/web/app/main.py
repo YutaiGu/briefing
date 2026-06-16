@@ -174,10 +174,12 @@ def get_reports(limit: int = 200):
     try:
         cur = conn.execute(
             """
-            SELECT id, video_id, title, source, downloaded_at, pushed, downloaded, webpage_url
+            SELECT id, video_id, title, source, downloaded_at, inserted_at, upload_date, pushed, downloaded, webpage_url
             FROM videos
             WHERE downloaded = 1
-            ORDER BY downloaded_at DESC, id DESC
+            ORDER BY REPLACE(REPLACE(REPLACE(REPLACE(
+                COALESCE(NULLIF(upload_date, ''), inserted_at),
+                '-', ''), ':', ''), 'T', ''), ' ', '') DESC, id DESC
             LIMIT ?
             """,
             (limit,),
@@ -193,6 +195,8 @@ def get_reports(limit: int = 200):
                 "source": r["source"] or "",
                 "webpage_url": r["webpage_url"] or "",
                 "downloaded_at": r["downloaded_at"] or "",
+                "upload_date": r["upload_date"] or "",
+                "inserted_at": r["inserted_at"] or "",
                 "pushed": int(r["pushed"] or 0),
                 "report_exists": bool(report_data),
                 "headline": report_data.get("headline", ""),

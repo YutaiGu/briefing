@@ -669,7 +669,7 @@
         const headlineMd = renderMarkdown((item.headline || "").trim());
         const clean = cleanTitle(item.title || item.video_id || "(no title)");
         const title = escapeHtml(clean);
-        const date = escapeHtml(formatDownloadedAt(item.downloaded_at));
+        const date = escapeHtml(formatDownloadedAt(item.upload_date || item.inserted_at));
         const canOpen = !!item.report_exists;
         const vid = escapeHtml(item.video_id || "");
         if (item.video_id) reportTitleMap[item.video_id] = clean;

@@ -241,21 +241,12 @@ def _to_list(filter_obj) -> list:
     return []
 
 
-def _fmt_upload_date(raw) -> str | None:
-    """Normalize f2's create_time into 'YYYYMMDD'.
-
-    f2 0.0.1.7 returns a string like '2026-03-29 02-28-24' (note: time also uses
-    '-'), so we take the date portion before the space and strip separators.
-    Also tolerates epoch seconds.
-    """
-    if raw is None or raw == "":
+def _time_format_douyin(epoch) -> str | None:
+    """Douyin publish epoch -> 'YYYY-MM-DD HH:MM:SS'. 0/None -> None."""
+    if not epoch:
         return None
     try:
-        if isinstance(raw, (int, float)) or (isinstance(raw, str) and raw.isdigit()):
-            return datetime.fromtimestamp(int(raw)).strftime("%Y%m%d")
-        date_part = str(raw).strip().split(" ")[0]               # '2026-03-29'
-        digits = date_part.replace("-", "").replace("/", "").replace(".", "")
-        return digits[:8] if len(digits) >= 8 else None
+        return datetime.fromtimestamp(int(epoch)).isoformat(sep=" ", timespec="seconds")
     except Exception:
         return None
 
@@ -313,17 +304,18 @@ async def _afetch_homepage_entries(source_url: str, limit: int) -> list[dict]:
         )
         if not aweme_id:
             continue
+        ts = _create_ts(item)
         webpage_url = f"https://www.douyin.com/video/{aweme_id}"
         entries.append({
             "source": source_url,
             "extractor": "douyin",
-            "upload_date": _fmt_upload_date(item.get("create_time") or item.get("createTime")),
+            "upload_date": _time_format_douyin(ts),
             "duration": _ms_to_sec(item.get("video_duration")),
             "language": None,
             "title": item.get("desc_raw") or item.get("desc") or item.get("title") or aweme_id,
             "webpage_url": webpage_url,
             "video_id": _make_video_id(webpage_url),
-            "_ts": _create_ts(item),
+            "_ts": ts,
             "_play": _find_play_url(item),
         })
 
