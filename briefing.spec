@@ -150,7 +150,9 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    console=True,   # keep terminal visible for error diagnostics (Windows)
+    # Windows: keep the console for diagnostics. macOS: must be False, or Finder
+    # won't launch the .app on double-click (a "console" app only runs from a terminal).
+    console=not IS_MAC,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
