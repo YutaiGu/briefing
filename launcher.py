@@ -56,6 +56,11 @@ def _run_worker() -> None:
     """Run the background processing loop (download / transcribe / push)."""
     import os
     import socket
+    for _s in (sys.stdout, sys.stderr):
+        try:
+            _s.reconfigure(line_buffering=True)
+        except Exception:
+            pass
     try:
         with socket.create_connection(("huggingface.co", 443), timeout=6):
             pass
