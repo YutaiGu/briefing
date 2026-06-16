@@ -6,8 +6,6 @@
 !requirements.txt
 !pyproject.toml
 !launcher.py
-!briefing.spec
-!build.bat
 
 # python sources
 !*.py
@@ -33,9 +31,13 @@
 !images/
 !images/**
 
-# build system
-!hooks/
-!hooks/*.py
+# build / packaging
+!packaging/
+!packaging/*.spec
+!packaging/*.bat
+!packaging/*.command
+!packaging/hooks/
+!packaging/hooks/*.py
 !.github/
 !.github/workflows/
 !.github/workflows/*.yml

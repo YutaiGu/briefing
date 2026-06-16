@@ -7,6 +7,11 @@ from PyInstaller.utils.hooks import collect_all
 IS_WIN = sys.platform == "win32"
 IS_MAC = sys.platform == "darwin"
 
+# This spec lives in packaging/, but launcher.py and src/ are at the repo root.
+# PyInstaller resolves spec-relative paths from the spec's dir, so anchor everything
+# to the root (SPECPATH = this spec's directory) to stay invocation-independent.
+ROOT = os.path.dirname(SPECPATH)
+
 block_cipher = None
 
 # F2 (Douyin downloader) loads apps.douyin.* via dynamic string imports and ships its
@@ -35,9 +40,9 @@ if IS_WIN:
 
 datas = [
     (p, "briefing/summarizer_agent/prompts")
-    for p in glob.glob("src/briefing/summarizer_agent/prompts/*.txt")
+    for p in glob.glob(os.path.join(ROOT, "src/briefing/summarizer_agent/prompts/*.txt"))
 ] + [
-    ("src/briefing/web/static/index.html",  "briefing/web/static"),
+    (os.path.join(ROOT, "src/briefing/web/static/index.html"),  "briefing/web/static"),
 ] + _f2_datas + _ff_datas
 
 # pywebview backend differs per OS.
@@ -123,14 +128,14 @@ hiddenimports = [
 ] + _f2_hiddenimports + _ff_hiddenimports
 
 a = Analysis(
-    ["launcher.py"],
-    pathex=["src", "."],
+    [os.path.join(ROOT, "launcher.py")],
+    pathex=[os.path.join(ROOT, "src"), ROOT],
     binaries=_extra_binaries + _f2_binaries + _ff_binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=["hooks/rthook_tiktoken.py"],
+    runtime_hooks=[os.path.join(ROOT, "packaging/hooks/rthook_tiktoken.py")],
     excludes=["pytest", "ipython", "jupyter", "matplotlib", "tkinter"],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
