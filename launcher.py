@@ -96,8 +96,6 @@ def main() -> None:
     import webview
 
     class _JsApi:
-        window = None
-
         def export_backup(self):
             try:
                 from briefing.web.app.runner import runner
@@ -108,8 +106,9 @@ def main() -> None:
             from datetime import datetime
             from pathlib import Path
             from briefing.migration import export_bytes
+            window = webview.active_window()
             save_mode = getattr(getattr(webview, "FileDialog", None), "SAVE", None) or webview.SAVE_DIALOG
-            result = self.window.create_file_dialog(
+            result = window.create_file_dialog(
                 save_mode,
                 save_filename=f"briefing-backup-{datetime.now():%Y%m%d-%H%M%S}.zip",
                 file_types=("Zip archive (*.zip)",),
@@ -121,7 +120,7 @@ def main() -> None:
             return {"path": path}
 
     api = _JsApi()
-    api.window = webview.create_window(
+    webview.create_window(
         "Briefing",
         f"http://127.0.0.1:{port}",
         width=1440,
