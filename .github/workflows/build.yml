@@ -83,6 +83,10 @@ jobs:
                **Open Anyway** (the app isn't Apple-notarized). After that it opens normally.
 
             Then open the **Secrets** panel and fill in your API Key, API URL, and NTFY Server, and save.
+
+            **Uninstall**
+            - Windows: delete the extracted folder.
+            - macOS: drag **Briefing** to Trash, then delete `~/Library/Application Support/Briefing/` for a full clean.
           files: |
             dist/briefing-${{ github.ref_name }}-windows.zip
             dist/briefing-${{ github.ref_name }}-macos.dmg
