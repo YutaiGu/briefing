@@ -42,7 +42,8 @@ datas = [
     (p, "briefing/summarizer_agent/prompts")
     for p in glob.glob(os.path.join(ROOT, "src/briefing/summarizer_agent/prompts/*.txt"))
 ] + [
-    (os.path.join(ROOT, "src/briefing/web/static/index.html"),  "briefing/web/static"),
+    (p, "briefing/web/static")               # index.html + marked.min.js + purify.min.js
+    for p in glob.glob(os.path.join(ROOT, "src/briefing/web/static/*"))
 ] + _f2_datas + _ff_datas
 
 # pywebview backend differs per OS.

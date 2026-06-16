@@ -58,13 +58,10 @@ jobs:
           mv "dist/_clean.app" "dist/Briefing.app"
           codesign --force --deep --sign - "dist/Briefing.app"
           codesign --verify --deep --strict --verbose=2 "dist/Briefing.app"
-          # Stage the dmg: the app, an Applications shortcut for drag-install, and a
-          # first-launch helper that clears quarantine (app isn't notarized).
+          # Stage the dmg: the app + an Applications shortcut for drag-install.
           mkdir -p dist/dmg
           ditto "dist/Briefing.app" "dist/dmg/Briefing.app"
           ln -s /Applications "dist/dmg/Applications"
-          cp "packaging/First Launch (run once).command" "dist/dmg/"
-          chmod +x "dist/dmg/First Launch (run once).command"
           hdiutil create -volname "Briefing" -srcfolder "dist/dmg" \
             -ov -format UDZO "dist/briefing-${{ github.ref_name }}-macos.dmg"
 
@@ -81,9 +78,9 @@ jobs:
 
             **macOS (Apple Silicon)** — `briefing-${{ github.ref_name }}-macos.dmg`
             1. Open the `.dmg` and drag **Briefing** into the **Applications** folder
-            2. First time only: double-click **First Launch (run once).command** — it
-               unlocks and launches the app (needed because the app isn't notarized).
-               After that, just double-click **Briefing** normally.
+            2. First launch: double-click **Briefing** (it's blocked), then open
+               **System Settings ▸ Privacy & Security**, scroll down and click
+               **Open Anyway** (the app isn't Apple-notarized). After that it opens normally.
 
             Then open the **Secrets** panel and fill in your API Key, API URL, and NTFY Server, and save.
           files: |

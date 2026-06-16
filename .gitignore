@@ -35,7 +35,6 @@
 !packaging/
 !packaging/*.spec
 !packaging/*.bat
-!packaging/*.command
 !packaging/hooks/
 !packaging/hooks/*.py
 !.github/
