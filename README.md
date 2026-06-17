@@ -1,4 +1,6 @@
-<h1 align="center">📡 Briefing</h1>
+<p align="center">
+  <img src="images/Banner.png" alt="Briefing" width="100%" />
+</p>
 
 <p align="center">
   <strong>Automatically track the creators you follow, summarize their newly published videos, and deliver concise reports.</strong>
