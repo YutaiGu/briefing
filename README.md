@@ -7,9 +7,8 @@
 </p>
 
 <div class="flex" align="center">
-  <img alt="Youtube" src="images/Youtube.svg" width="26">
   <img alt="Douyin" src="images/TikTok.svg" width="26">
-  <img alt="Instagram" src="images/Instagram.svg" width="26">
+  <img alt="Youtube" src="images/Youtube.svg" width="26">
   <img alt="TikTok" src="images/TikTok.svg" width="26">
   <img alt="Bilibili" src="images/Bilibili.svg" width="26">
 </div>
@@ -35,14 +34,15 @@ This enables you to quickly grasp the **core viewpoints and high-frequency insig
 
 | Platform | Support | Notes |
 |--------|--------|------|
-| 📺 **YouTube** | Supported | Automatic |
-| 📺 **Bilibili** | Supported | Automatic |
-| 🎵 **TikTok** | Supported | Automatic |
-| 💬 **Douyin** | Supported | Automatic (via [f2](https://github.com/Johnserf-Seed/f2)) |
-| 📡 **Live Stream Recordings** | Supported via external tool [DouyinLiveRecorder](https://github.com/ihmily/DouyinLiveRecorder) | [See below for details](#12-external-downloader-compatibility) |
+| <img src="images/Youtube.svg" width="14"/> **YouTube** | ✅ | Automatic |
+| <img src="images/Bilibili.svg" width="14"/> **Bilibili** | ✅ | Automatic |
+| <img src="images/TikTok.svg" width="14"/> **TikTok** | ✅ | Automatic |
+| <img src="images/TikTok.svg" width="14"/> **Douyin** | ✅ | Automatic (via [f2](https://github.com/Johnserf-Seed/f2)) |
+| 📡 **Live Stream Recordings** | ✅ via external tool [DouyinLiveRecorder](https://github.com/ihmily/DouyinLiveRecorder) | [See below for details](#12-external-downloader-compatibility) |
 | 📕 **Xiaohongshu** | In development | |
-| 📕 **Instagram** | In development | |
-| 📖 **Reddit** | In development | |
+| <img src="images/Instagram.svg" width="14"/> **Instagram** | In development | |
+| <img src="images/Reddit.svg" width="14"/> **Reddit** | In development | |
+| <img src="images/X.svg" width="14"/> **X** | In development | |
 
 ### 1.2 External Downloader Compatibility
 
@@ -55,10 +55,10 @@ The system will automatically detect and process them.
 
 | Provider | Support |
 |--------|--------|
-| 🤖 **OpenAI** | Supported |
-| 🐳 **DeepSeek** | Supported |
-| ♊ **Gemini** | Supported |
-| 🔀 **OpenRouter** | Supported |
+| <img src="images/chatgpt.svg" width="14"/> **OpenAI** | ✅ |
+| <img src="images/deepseek.svg" width="14"/> **DeepSeek** | ✅ |
+| <img src="images/gemini.svg" width="14"/> **Gemini** | ✅ |
+| 🔀 **OpenRouter** | ✅ |
 | ✨ **More** | On the way |
 
 ![Multiple Model Support](images/6.png)

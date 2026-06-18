@@ -7,9 +7,8 @@
 </p>
 
 <div class="flex" align="center">
-  <img alt="Youtube" src="images/Youtube.svg" width="26">
   <img alt="Douyin" src="images/TikTok.svg" width="26">
-  <img alt="Instagram" src="images/Instagram.svg" width="26">
+  <img alt="Youtube" src="images/Youtube.svg" width="26">
   <img alt="TikTok" src="images/TikTok.svg" width="26">
   <img alt="Bilibili" src="images/Bilibili.svg" width="26">
 </div>
@@ -31,31 +30,30 @@
 
 ### 1.1 当前支持平台
 
-| 平台 | 是否支持 | 使用方式 |
-|---------|---------|-----------|
-| 📺 **YouTube** | 直接支持 | 自动 |
-| 📺 **B站** | 直接支持 | 自动 |
-| 🎵 **TikTok** | 直接支持 | 自动 |
-| 💬 **抖音** | 直接支持 | 自动（通过 [f2](https://github.com/Johnserf-Seed/f2)） |
-| 📡 **各大平台直播录制** | 外部下载器支持 [DouyinLiveRecorder](https://github.com/ihmily/DouyinLiveRecorder) | [详见下文](#12-本项目兼容外部下载器) |
-| 📕 **小红书** | 开发中 | - |
-| 📕 **Instagram** | 开发中 | - |
-| 📖 **Reddit** | 开发中 | - |
+| Platform | Support | Notes |
+|--------|--------|------|
+| <img src="images/Youtube.svg" width="14"/> **YouTube** | ✅ | 自动 |
+| <img src="images/Bilibili.svg" width="14"/> **Bilibili** | ✅ | 自动 |
+| <img src="images/TikTok.svg" width="14"/> **TikTok** | ✅ | 自动 |
+| <img src="images/TikTok.svg" width="14"/> **Douyin** | ✅ | 自动（通过 [f2](https://github.com/Johnserf-Seed/f2)）|
+| 📡 **Live Stream Recordings** | 外部下载器支持 [DouyinLiveRecorder](https://github.com/ihmily/DouyinLiveRecorder) | [See below for details](#12-external-downloader-compatibility) |
+| 📕 **Xiaohongshu** | 开发中 | |
+| <img src="images/Instagram.svg" width="14"/> **Instagram** | 开发中 | |
+| <img src="images/Reddit.svg" width="14"/> **Reddit** | 开发中 | |
+| <img src="images/X.svg" width="14"/> **X** | 开发中 | |
 
 ### 1.2 本项目兼容外部下载器
 将下载目录/外部音频文件置于`briefing/data/audio`目录，系统将自动检测并处理这些文件。
 
 ### 1.3 多模型支持
 
-可在多种模型中自由选择
-
 | 服务商 | 是否支持 |
 |--------|--------|
-| 🤖 **OpenAI** | 支持 |
-| 🐳 **DeepSeek** | 支持 |
-| ♊ **Gemini** | 支持 |
-| 🔀 **OpenRouter** | 支持 |
-| ✨ **更多** | 即将到来 |
+| <img src="images/chatgpt.svg" width="14"/> **OpenAI** | ✅ |
+| <img src="images/deepseek.svg" width="14"/> **DeepSeek** | ✅ |
+| <img src="images/gemini.svg" width="14"/> **Gemini** | ✅ |
+| 🔀 **OpenRouter** | ✅ |
+| ✨ **More** | 即将到来 |
 
 ![多模型支持](images/6.png)
 
