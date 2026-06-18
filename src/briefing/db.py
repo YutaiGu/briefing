@@ -151,7 +151,10 @@ def clean_entries(session) -> int:
         by_source.setdefault(v.source or "", []).append(v)
 
     for group in by_source.values():
-        group.sort(key=lambda x: x.inserted_at or "", reverse=True)
+        group.sort(
+            key=lambda v: "".join(c for c in (v.upload_date or v.inserted_at or "") if c.isdigit()),
+            reverse=True,
+        )
         for rank, v in enumerate(group):
             if rank < _ENTRIES_LIMIT_INT:
                 continue
