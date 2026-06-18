@@ -53,15 +53,17 @@
 
 ### 1.3 多模型支持
 
-| 服务商 | 是否支持 |
-|--------|--------|
-| <img src="images/chatgpt.svg" width="14"/> **OpenAI** | ✅ |
-| <img src="images/deepseek.svg" width="14"/> **DeepSeek** | ✅ |
-| <img src="images/gemini.svg" width="14"/> **Gemini** | ✅ |
-| 🔀 **OpenRouter** | ✅ |
-| ✨ **More** | 即将到来 |
+<p align="center">
+  <img src="https://img.shields.io/badge/OpenAI-000?logo=openai&logoColor=white" />
+  <img src="https://img.shields.io/badge/DeepSeek-4D6BFE?logo=deepseek&logoColor=white" />
+  <img src="https://img.shields.io/badge/Gemini-886FBF?logo=googlegemini&logoColor=white" />
+  <img src="https://img.shields.io/badge/OpenRouter-6566F1?logo=openrouter&logoColor=white" />
+  <img src="https://img.shields.io/badge/+%20more-on%20the%20way-lightgrey" />
+</p>
 
-![多模型支持](images/6.png)
+<p align="center">
+  <img alt="Multiple Model Support" src="images/6.png" width="80%" />
+</p>
 
 ### 1.4 自进化摘要
 
@@ -109,10 +111,10 @@
 
 ### 3.4 主页链接填写格式
 
-- **YouTube**: https://www.youtube.com/@example/videos
-- **BiliBili**: https://space.bilibili.com/example/upload/video
-- **TikTok**: https://www.tiktok.com/@example
-- **Douyin**: https://v.douyin.com/example/
+- **YouTube**: `https://www.youtube.com/@example/videos`
+- **BiliBili**: `https://space.bilibili.com/example/upload/video`
+- **TikTok**: `https://www.tiktok.com/@example`
+- **Douyin**: `https://v.douyin.com/example/`
 
 ### 3.5 浏览器 Cookie（推荐）
 

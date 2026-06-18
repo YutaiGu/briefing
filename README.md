@@ -59,15 +59,17 @@ The system will automatically detect and process them.
 
 ### 1.3 Multiple Model Support
 
-| Provider | Support |
-|--------|--------|
-| <img src="images/chatgpt.svg" width="14"/> **OpenAI** | ✅ |
-| <img src="images/deepseek.svg" width="14"/> **DeepSeek** | ✅ |
-| <img src="images/gemini.svg" width="14"/> **Gemini** | ✅ |
-| 🔀 **OpenRouter** | ✅ |
-| ✨ **More** | On the way |
+<p align="center">
+  <img src="https://img.shields.io/badge/OpenAI-000?logo=openai&logoColor=white" />
+  <img src="https://img.shields.io/badge/DeepSeek-4D6BFE?logo=deepseek&logoColor=white" />
+  <img src="https://img.shields.io/badge/Gemini-886FBF?logo=googlegemini&logoColor=white" />
+  <img src="https://img.shields.io/badge/OpenRouter-6566F1?logo=openrouter&logoColor=white" />
+  <img src="https://img.shields.io/badge/+%20more-on%20the%20way-lightgrey" />
+</p>
 
-![Multiple Model Support](images/6.png)
+<p align="center">
+  <img alt="Multiple Model Support" src="images/6.png" width="80%" />
+</p>
 
 ### 1.4 Self-Evolving Summaries
 
@@ -115,10 +117,10 @@ Go to [Releases](https://github.com/YutaiGu/briefing/releases/) and download the
 
 ### 3.4 Source URL Format
 
-- **YouTube**: https://www.youtube.com/@example/videos
-- **BiliBili**: https://space.bilibili.com/example/upload/video
-- **TikTok**: https://www.tiktok.com/@example
-- **Douyin**: https://v.douyin.com/example/
+- **YouTube**: `https://www.youtube.com/@example/videos`
+- **BiliBili**: `https://space.bilibili.com/example/upload/video`
+- **TikTok**: `https://www.tiktok.com/@example`
+- **Douyin**: `https://v.douyin.com/example/`
 
 ### 3.5 Browser Cookies (Recommended)
 
