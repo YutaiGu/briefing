@@ -25,7 +25,7 @@
 ## 🎬 See it in action
 
 <p align="center">
-  <img alt="Briefing demo" src="images/briefing01.gif" width="100%" />
+  <img alt="Briefing demo" src="images/briefing01.gif" width="80%" />
 </p>
 
 ## 1. Overview
@@ -82,7 +82,7 @@ Leave a quick note on any report and the summary agent **learns from your feedba
 ### 2.1 GUI Reading Interface
 
 <p align="center">
-  <img alt="Briefing demo" src="images/briefing01.gif" width="100%" />
+  <img alt="Briefing demo" src="images/briefing02.gif" width="80%" />
 </p>
 
 ### 2.2 Send Summary to Terminal

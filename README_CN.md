@@ -25,7 +25,7 @@
 ## 🎬 演示
 
 <p align="center">
-  <img alt="Briefing demo" src="images/briefing01.gif" width="100%" />
+  <img alt="Briefing demo" src="images/briefing01.gif" width="80%" />
 </p>
 
 ## 1. 功能简介
@@ -76,7 +76,7 @@
 ### 2.1 图形化界面阅读
 
 <p align="center">
-  <img alt="Briefing demo" src="images/briefing01.gif" width="100%" />
+  <img alt="Briefing demo" src="images/briefing02.gif" width="80%" />
 </p>
 
 ### 2.2 发送总结到终端
