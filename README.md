@@ -65,7 +65,7 @@ The system will automatically detect and process them.
 
 ### 1.4 Self-Evolving Summaries
 
-Leave a quick note on any report and the summary style **learns from your feedback**, getting closer to how you like it over time.
+Leave a quick note on any report and the summary agent **learns from your feedback**, getting closer to how you like it over time.
 
 ![Self-Evolving Summaries](images/7.png)
 

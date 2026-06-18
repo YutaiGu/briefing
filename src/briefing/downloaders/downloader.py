@@ -122,10 +122,9 @@ def fetch_all_entries(source_url: str) -> list:
 
         _android = {"extractor_args": {"youtube": {"player_client": ["android"]}}}
         attempts = [
-            ({"cookiesfrombrowser": ("firefox",)}, False),
-            ({},                                   True),
-            (_android,                             True),
-            ({},                                   False),
+            ({},        True),
+            (_android,  True),
+            ({},        False),
         ]
 
         info = None
@@ -240,10 +239,9 @@ def download_entry(entry: Video) -> bool:
 
     _android = {"extractor_args": {"youtube": {"player_client": ["android"]}}}
     attempts = [
-        ({"cookiesfrombrowser": ("firefox",)}, False),
-        ({},                                   True),
-        (_android,                             True),
-        ({},                                   False),
+        ({},        True),
+        (_android,  True),
+        ({},        False),
     ]
 
     last_error = None
