@@ -3,15 +3,24 @@
 </p>
 
 <p align="center">
-  <strong>Automatically track the creators you follow, summarize their newly published videos, and deliver concise reports.</strong>
+  <strong>Automatically turn new videos from across platforms into concise, self-improving briefings.</strong>
 </p>
+
+<div class="flex" align="center">
+  <img alt="Youtube" src="images/Youtube.svg" width="26">
+  <img alt="Douyin" src="images/TikTok.svg" width="26">
+  <img alt="Instagram" src="images/Instagram.svg" width="26">
+  <img alt="TikTok" src="images/TikTok.svg" width="26">
+  <img alt="Bilibili" src="images/Bilibili.svg" width="26">
+</div>
 
 <p align="center">
   <a href="#3-quick-start-no-configuration-required">Quick Start</a> · <a href="README_CN.md">中文文档</a> · <a href="#11-supported-platforms">Supported Platforms</a>
 </p>
 
+![Release](https://img.shields.io/github/v/release/YutaiGu/briefing?style=flat)
 ![Python](https://img.shields.io/badge/python-3.10-blue?style=flat)
-![Status](https://img.shields.io/badge/status-active-success?style=flat)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey?style=flat)
 ![License](https://img.shields.io/github/license/YutaiGu/briefing?style=flat)
 
 ## 1. Overview

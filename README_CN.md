@@ -1,15 +1,26 @@
-<h1 align="center">📡 Briefing</h1>
-
 <p align="center">
-  <strong>自动跟踪订阅的博主，总结视频摘要并推送到端服务</strong>
+  <img src="images/Banner.png" alt="Briefing" width="100%" />
 </p>
 
 <p align="center">
-  <a href="#3-快速开始无需配置一键使用">快速开始</a> · <a href="README.md">English Documentation</a> · <a href="#11-当前支持平台">支持平台</a>
+  <strong>自动聚合各平台发布的新视频，生成自我迭代的精炼简报</strong>
 </p>
 
+<div class="flex" align="center">
+  <img alt="Youtube" src="images/Youtube.svg" width="26">
+  <img alt="Douyin" src="images/TikTok.svg" width="26">
+  <img alt="Instagram" src="images/Instagram.svg" width="26">
+  <img alt="TikTok" src="images/TikTok.svg" width="26">
+  <img alt="Bilibili" src="images/Bilibili.svg" width="26">
+</div>
+
+<p align="center">
+  <a href="#3-quick-start-no-configuration-required">Quick Start</a> · <a href="README_CN.md">中文文档</a> · <a href="#11-supported-platforms">Supported Platforms</a>
+</p>
+
+![Release](https://img.shields.io/github/v/release/YutaiGu/briefing?style=flat)
 ![Python](https://img.shields.io/badge/python-3.10-blue?style=flat)
-![Status](https://img.shields.io/badge/status-active-success?style=flat)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey?style=flat)
 ![License](https://img.shields.io/github/license/YutaiGu/briefing?style=flat)
 
 ## 1. 功能简介
