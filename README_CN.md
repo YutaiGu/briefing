@@ -22,6 +22,12 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey?style=flat)
 ![License](https://img.shields.io/github/license/YutaiGu/briefing?style=flat)
 
+## 🎬 演示
+
+<p align="center">
+  <img alt="Briefing demo" src="images/briefing01.gif" width="100%" />
+</p>
+
 ## 1. 功能简介
 
 这是一个用于 **自动跟踪你订阅的博主** 并 **总结其最新发布的视频** (包括往期视频) 的服务。
@@ -67,14 +73,13 @@
 
 ## 2. 功能展示
 
-### 2.1 运行面板
-![2](images/2.png)
+### 2.1 图形化界面阅读
 
-### 2.2 图形化界面阅读
+<p align="center">
+  <img alt="Briefing demo" src="images/briefing01.gif" width="100%" />
+</p>
 
-![4](images/4.png)
-
-### 2.3 发送总结到终端
+### 2.2 发送总结到终端
 ![1](images/1.png)
 
 ---

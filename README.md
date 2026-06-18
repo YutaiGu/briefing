@@ -22,6 +22,12 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey?style=flat)
 ![License](https://img.shields.io/github/license/YutaiGu/briefing?style=flat)
 
+## 🎬 See it in action
+
+<p align="center">
+  <img alt="Briefing demo" src="images/briefing01.gif" width="100%" />
+</p>
+
 ## 1. Overview
 
 This is a backend service for **automatically tracking the creators you follow** and **summarizing their newly published videos** (including older content).
@@ -73,15 +79,13 @@ Leave a quick note on any report and the summary agent **learns from your feedba
 
 ## 2. Feature Preview
 
-### 2.1 Run Panel
+### 2.1 GUI Reading Interface
 
-![panel](images/2.png)
+<p align="center">
+  <img alt="Briefing demo" src="images/briefing01.gif" width="100%" />
+</p>
 
-### 2.2 GUI Reading Interface
-
-![panel](images/4.png)
-
-### 2.3 Send Summary to Terminal
+### 2.2 Send Summary to Terminal
 
 ![panel](images/1.png)
 
