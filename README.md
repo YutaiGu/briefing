@@ -87,61 +87,50 @@ Leave a quick note on any report and the summary agent **learns from your feedba
 
 ### 2.2 Send Summary to Terminal
 
-![panel](images/1.png)
+<p align="center">
+  <img alt="Send Summary to Terminal" src="images/1.png" width="80%" />
+</p>
 
 ---
 
-# 3. Quick Start (No Configuration Required)
+## 3. Quick Start (No Configuration Required)
 
 ### 3.1 Download
 
-Go to [Releases](https://github.com/YutaiGu/briefing/releases/) and download the latest `briefing-vX.X.X-windows.zip`.
+Go to [Releases](https://github.com/YutaiGu/briefing/releases/) and download the latest build for your OS:
+
+- **Windows** — `briefing-vX.X.X-windows.zip`
+- **macOS** — `briefing-vX.X.X-macos.dmg`
 
 > Windows 7 / 8 may require installing [Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)
 
-### 3.2 Extract and Run
+### 3.2 Install and Run
 
-Extract to any directory and run: `briefing.exe`
+- **Windows** — extract to any directory and run `briefing.exe`.
+- **macOS** — open the `.dmg` and drag **Briefing** into Applications. On first launch (the app isn't notarized): double-click it, then go to **System Settings ▸ Privacy & Security** and click **Open Anyway**. After that, just double-click normally.
 
-### 3.3 API Configuration (Required)
-
-This project relies on external APIs for:
-
-* Content summarization
-* Translation
-* Text compression
+### 3.3 LLM API Configuration (Required)
 
 ![5](images/5.png)
 
-Official OpenAI documentation:
+### 3.4 Source URL Format
 
-* [https://platform.openai.com/docs/quickstart](https://platform.openai.com/docs/quickstart)
+- **YouTube**: https://www.youtube.com/@example/videos
+- **BiliBili**: https://space.bilibili.com/example/upload/video
+- **TikTok**: https://www.tiktok.com/@example
+- **Douyin**: https://v.douyin.com/example/
 
-Beginner-friendly tutorial (third-party, OpenAI-compatible API):
+### 3.5 Browser Cookies (Recommended)
 
-* [https://github.com/chatanywhere/GPT_API_free?tab=readme-ov-file#如何使用](https://github.com/chatanywhere/GPT_API_free?tab=readme-ov-file#如何使用)
+For content that requires login (e.g. Bilibili / Douyin homepages), just **log into the site in any installed browser** (Safari / Edge / Firefox / Chrome). On each run the downloader automatically reads and merges cookies from all of them into `cookies.txt` — no manual export needed.
 
-These resources provide step-by-step guidance on how to obtain an API key and configure it correctly.
-
-### 3.4 ntfy Notifications (Optional)
+### 3.6 ntfy Notifications (Optional)
 
 This project uses **ntfy** as the message delivery channel.
 
 You only need to choose a **unique string** as your topic, for example: `https://ntfy.sh/example123`
 
 Summary reports can be read by opening this URL in a browser.
-
-### 3.5 Source URL Format
-
-![3](images/3.png)
-
-- **YouTube**: https://www.youtube.com/@example/videos
-- **BiliBili**: https://space.bilibili.com/example/upload/video
-- **TikTok**: https://www.tiktok.com/@example
-
-### 3.6 Firefox Cookie Support (Recommend)
-
-If Firefox is installed on this machine and you have previously logged into video sites, the downloader will automatically read cookies from the default Firefox profile to handle videos accessible only after login. No additional configuration is required—simply ensure Firefox has downloaded and used content before starting the service.
 
 ## 4. Run From Source (Developers)
 

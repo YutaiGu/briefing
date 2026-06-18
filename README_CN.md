@@ -80,7 +80,10 @@
 </p>
 
 ### 2.2 发送总结到终端
-![1](images/1.png)
+
+<p align="center">
+  <img alt="Send Summary to Terminal" src="images/1.png" width="80%" />
+</p>
 
 ---
 
@@ -88,41 +91,37 @@
 
 ### 3.1 下载
 
-前往 [Releases](https://github.com/YutaiGu/briefing/releases/)，下载最新版 `briefing-vX.X.X-windows.zip`
+前往 [Releases](https://github.com/YutaiGu/briefing/releases/)，按系统下载最新版：
+
+- **Windows** — `briefing-vX.X.X-windows.zip`
+- **macOS** — `briefing-vX.X.X-macos.dmg`
 
 > Windows 7/8 或更早期版本需安装[Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)
 
-### 3.2 解压并运行
+### 3.2 安装并运行
 
-解压到任意目录，双击 `briefing.exe` 即可启动。
+- **Windows** — 解压到任意目录，双击 `briefing.exe` 启动。
+- **macOS** — 打开 `.dmg`，把 **Briefing** 拖进「应用程序」。首次启动（应用未做苹果公证）：双击它，再到 **系统设置 ▸ 隐私与安全性**，点 **仍要打开**；之后正常双击即可。
 
-### 3.3 API 配置（必须）
-本项目依赖API用于：内容总结、翻译、压缩处理
+### 3.3 API 配置（Required）
 
 ![5](images/5.png)
 
-OpenAI官方文档
-* [https://platform.openai.com/docs/quickstart](https://platform.openai.com/docs/quickstart)
-
-中文获取教程（国内代理网站）
-* [https://github.com/chatanywhere/GPT_API_free?tab=readme-ov-file#如何使用](https://github.com/chatanywhere/GPT_API_free?tab=readme-ov-file#如何使用)
-
-### 3.4 ntfy消息推送配置（可选）
-本项目使用 ntfy 作为消息推送通道，只需要想一个自己专属、不会重复的字符串即可：`https://ntfy.sh/example123`
-
-可以通过网页登录此链接的方式阅读报告
-
-### 3.5 主页链接填写方式
-
-![3](images/3.png)
+### 3.4 主页链接填写格式
 
 - **YouTube**: https://www.youtube.com/@example/videos
 - **BiliBili**: https://space.bilibili.com/example/upload/video
 - **TikTok**: https://www.tiktok.com/@example
+- **Douyin**: https://v.douyin.com/example/
 
-### 3.6 Firefox（推荐）
+### 3.5 浏览器 Cookie（推荐）
 
-如果本机安装了 Firefox 并且曾经登录过视频站点，下载器会自动读取默认 Firefox 配置文件的 cookies，用于处理仅登录可见的视频。无需额外配置，启动服务前保持 Firefox 已下载且使用过即可。
+遇到需要登录的内容（如 B站 / 抖音），只需**在任意已安装的浏览器里登录该站点**（Safari / Edge / Firefox / Chrome）。每次运行时下载器会自动读取并合并所有浏览器的 cookie 到 `cookies.txt`，无需手动导出。
+
+### 3.6 ntfy消息推送配置（可选）
+本项目使用 ntfy 作为消息推送通道，只需要想一个自己专属、不会重复的字符串即可：`https://ntfy.sh/example123`
+
+可以通过网页登录此链接的方式阅读报告
 
 ## 4. 从源码运行（开发者）
 
