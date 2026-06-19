@@ -239,11 +239,23 @@ def get_report_detail(video_id: str):
     data = json.loads(report_path.read_text(encoding="utf-8"))
     with Session(engine, future=True) as session:
         feedback = get_feedback_map(session, v)
+
+    webpage_url = ""
+    if DB_PATH.exists():
+        conn = sqlite3.connect(DB_PATH.as_posix())
+        try:
+            row = conn.execute("SELECT webpage_url FROM videos WHERE video_id = ?", (v,)).fetchone()
+            if row:
+                webpage_url = row[0] or ""
+        finally:
+            conn.close()
+
     return {
         "video_id": v,
         "content": data.get("content", ""),
         "headline": data.get("headline", ""),
         "short": data.get("short", ""),
+        "webpage_url": webpage_url,
         "feedback": feedback,
     }
 

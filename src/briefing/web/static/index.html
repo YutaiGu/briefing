@@ -109,6 +109,10 @@
     .report-card-head { display: flex; flex-direction: column; gap: 3px; }
     .report-headline { font-family: var(--serif); font-weight: 700; color: var(--ink); font-size: 14px; line-height: 1.5; }
     .report-headline :is(h1, h2, h3, p) { font-size: 1em; margin: 0; }
+    .entry-link { color: inherit; text-decoration: none; }
+    .entry-link:hover { color: var(--accent-deep); text-decoration: underline; text-underline-offset: 2px; }
+    .support-banner { display: block; margin: 2px 0 16px; font-weight: 500; color: var(--accent); text-decoration: none; }
+    .support-banner:hover { color: var(--accent-deep); text-decoration: underline; text-underline-offset: 2px; }
     .report-title { font-weight: 600; color: var(--ink); }
     .report-subtitle { font-size: 12px; color: var(--muted); }
     .report-meta { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
@@ -718,7 +722,8 @@
       const localItems = [];
       const renderItem = (item) => {
         const headlineMd = renderMarkdown((item.headline || "").trim());
-        const clean = cleanTitle(item.title || item.video_id || "(no title)");
+        const rawTitle = (item.title || "").trim();
+        const clean = rawTitle ? cleanTitle(rawTitle) : (fbLang() === "zh" ? "未命名" : "Untitled");
         const title = escapeHtml(clean);
         const date = escapeHtml(formatDownloadedAt(item.upload_date || item.inserted_at));
         const canOpen = !!item.report_exists;
@@ -729,11 +734,15 @@
         const expandHtml = expanded
           ? `<div class="short-block md">${renderMarkdown(reportCache[item.video_id].short || "")}</div>`
           : "";
+        const url = (item.webpage_url || "").trim();
+        const linkWrap = /^https?:\/\//i.test(url)
+          ? (inner) => `<a class="entry-link" href="${escapeHtml(url)}" target="_blank" rel="noopener" title="Jump to original ↗">${inner}</a>`
+          : (inner) => inner;
         return `
           <div class="report-item${isNew ? " is-new" : ""}" data-vid="${vid}">
             <div class="report-card-head">
               ${headlineMd ? `<div class="report-headline md">${headlineMd}</div>` : ""}
-              <div class="${headlineMd ? "report-subtitle" : "report-title"}">${title}</div>
+              <div class="${headlineMd ? "report-subtitle" : "report-title"}">${linkWrap(title)}</div>
               <div class="report-footer">
                 <span class="report-meta">${date}</span>
                 ${statusHtml(item)}
@@ -965,6 +974,7 @@
       short:     { en: "Short",     zh: "短摘要" },
       submit:    { en: "Submit feedback", zh: "提交意见" },
       ph:        { en: "Feedback (leave empty = fine)", zh: "改进意见（不填=满意）" },
+      support:   { en: "Enjoyed this? Open the original and support the creator ↗", zh: "喜欢这个内容？点开原视频给作者点赞支持 ↗" },
     };
     function fbLang() { return (config && config.READ_LANGUAGE === "chinese") ? "zh" : "en"; }
     function fbt(key) { return FB_TXT[key][fbLang()]; }
@@ -981,7 +991,11 @@
       const h = (data.headline || "").trim();
       const c = (data.content || "").trim();
       const r = (data.short || "").trim();
+      const url = (data.webpage_url || "").trim();
       let html = "";
+      if (/^https?:\/\//i.test(url)) {
+        html += `<a class="support-banner" href="${escapeHtml(url)}" target="_blank" rel="noopener">${fbt("support")}</a>`;
+      }
       if (h) html += `<h3 class="rsec">${fbt("headline")}</h3><div class="md">${renderMarkdown(h)}</div>` + fbBox("headline", fb.headline);
       html += `<h3 class="rsec">${fbt("brief")}</h3><div class="md">${renderMarkdown(c)}</div>` + fbBox("brief", fb.brief);
       if (r) html += `<h3 class="rsec">${fbt("short")}</h3><div class="short-block md">${renderMarkdown(r)}</div>` + fbBox("short", fb.short);
