@@ -30,7 +30,7 @@
 
 ## 1. Overview
 
-This is a backend service for **automatically tracking the creators you follow** and **summarizing their newly published videos** (including older content).
+This is a backend service for **automatically tracking the channels you follow** and **summarizing their newly published videos** (including older content).
 
 The system periodically checks whether specified creators have released new videos, automatically performs **download → transcription → content refinement**, and delivers **structured, concise summary reports** to the configured destination.
 
