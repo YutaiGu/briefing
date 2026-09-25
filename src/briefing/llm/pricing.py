@@ -27,9 +27,29 @@ def _load() -> dict:
 _PRICES = _load()
 
 
+def _index(prices: dict) -> dict:
+    """Also key every row by its name without the provider prefix
+    ('gemini/gemini-3.8-flash' -> 'gemini-3.8-flash'); exact keys win."""
+    idx = {k.split("/", 1)[1]: v for k, v in prices.items() if "/" in k}
+    idx.update(prices)
+    return idx
+
+
+_ROWS = _index(_PRICES)
+
+
+def _row(model: str) -> dict:
+    """Row for 'provider/model', a bare model name, or an OpenRouter-style path."""
+    for k in (model, model.split("/", 1)[-1], model.split("/")[-1]):
+        row = _ROWS.get(k)
+        if isinstance(row, dict):
+            return row
+    return {}
+
+
 def refresh(force: bool = False) -> None:
     """Fetch the latest table into data/model_prices.json. Best-effort, never raises."""
-    global _PRICES
+    global _PRICES, _ROWS
     try:
         if not force and _FILE.exists() and (time.time() - _FILE.stat().st_mtime) < _TTL:
             return
@@ -39,13 +59,14 @@ def refresh(force: bool = False) -> None:
             _FILE.parent.mkdir(parents=True, exist_ok=True)
             _FILE.write_text(json.dumps(data), encoding="utf-8")
             _PRICES = data
+            _ROWS = _index(data)
     except Exception:
         pass  # keep whatever we loaded; offline is fine
 
 
 def price(model: str) -> dict:
     """USD per token: {'input', 'output'}."""
-    row = _PRICES.get(model) or {}
+    row = _row(model)
     return {
         "input": row.get("input_cost_per_token") or 0.0,
         "output": row.get("output_cost_per_token") or 0.0,
@@ -58,18 +79,15 @@ def _fmt(x: float) -> str:
 
 def price_label(model: str) -> str:
     """'$in / $out' per 1M tokens for a 'provider/model' option, or '' if unknown."""
-    for k in (model, model.split("/", 1)[-1], model.split("/")[-1]):
-        row = _PRICES.get(k)
-        if row:
-            i = (row.get("input_cost_per_token") or 0.0) * 1_000_000
-            o = (row.get("output_cost_per_token") or 0.0) * 1_000_000
-            return f"${_fmt(i)} / ${_fmt(o)}" if (i or o) else ""
-    return ""
+    row = _row(model)
+    i = (row.get("input_cost_per_token") or 0.0) * 1_000_000
+    o = (row.get("output_cost_per_token") or 0.0) * 1_000_000
+    return f"${_fmt(i)} / ${_fmt(o)}" if (i or o) else ""
 
 
 def model_limits(model: str) -> dict:
     """Chunk/output budgets: input = 90% of context, output = model max."""
-    row = _PRICES.get(model) or {}
+    row = _row(model)
     ctx = row.get("max_input_tokens") or row.get("max_tokens") or 8192
     out = row.get("max_output_tokens") or row.get("max_tokens") or 4096
     return {"max_input": int(ctx * 0.9), "max_output": int(out)}

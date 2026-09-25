@@ -9,20 +9,26 @@ from typing import Any, Dict, List
 # prefix (before the first "/") selects which PROVIDERS row supplies key + URL;
 # the rest is the model name sent to that endpoint. Users may also type custom.
 MODEL_OPTIONS: List[str] = [
-    "openai/gpt-4o", "openai/gpt-4o-mini",
-    "openai/gpt-4.1", "openai/gpt-4.1-mini", "openai/gpt-4.1-nano", "openai/o3-mini",
-    "deepseek/deepseek-chat", "deepseek/deepseek-reasoner",
-    "gemini/gemini-2.5-flash", "gemini/gemini-2.5-pro", "gemini/gemini-2.0-flash",
-    "openrouter/anthropic/claude-3.5-sonnet",
-    "openrouter/meta-llama/llama-3.3-70b-instruct",
+    "openai/gpt-6-astra", "openai/gpt-6-sol", "openai/gpt-6-luna",
+    "deepseek/deepseek-v4-pro", "deepseek/deepseek-flash",
+    "gemini/gemini-3.1-pro-preview", "gemini/gemini-3.8-flash",
+    "gemini/gemini-3.5-flash-lite", "gemini/gemini-3.1-flash-lite",
+    "openrouter/anthropic/claude-fable-5.1", "openrouter/anthropic/claude-opus-5.5",
+    "openrouter/anthropic/claude-sonnet-5", "openrouter/anthropic/claude-haiku-4.5",
+    "openrouter/x-ai/grok-4.7",
+    "openrouter/qwen/qwen3.8-max-prime", "openrouter/qwen/qwen3.8-flash",
+    "openrouter/moonshotai/kimi-k3",
 ]
+DEFAULT_MODEL = "openai/gpt-6-luna"
 
-# Pre-seeded OpenAI-compatible endpoints; user just fills the api_key it needs.
+# Pre-seeded OpenAI-compatible endpoints (base URL up to /v1; a full
+# .../chat/completions URL also works). Any other OpenAI-compatible service can
+# be added in the panel with a name + base URL + key.
 PROVIDER_SEED: List[Dict[str, str]] = [
-    {"id": "openai",     "base_url": "https://api.openai.com/v1/chat/completions",                       "api_key": ""},
-    {"id": "deepseek",   "base_url": "https://api.deepseek.com/chat/completions",                        "api_key": ""},
-    {"id": "gemini",     "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "api_key": ""},
-    {"id": "openrouter", "base_url": "https://openrouter.ai/api/v1/chat/completions",                    "api_key": ""},
+    {"id": "openai",     "base_url": "https://api.openai.com/v1",                               "api_key": ""},
+    {"id": "deepseek",   "base_url": "https://api.deepseek.com",                                "api_key": ""},
+    {"id": "gemini",     "base_url": "https://generativelanguage.googleapis.com/v1beta/openai", "api_key": ""},
+    {"id": "openrouter", "base_url": "https://openrouter.ai/api/v1",                            "api_key": ""},
 ]
 
 SCHEMA: List[Dict[str, Any]] = [
@@ -128,7 +134,7 @@ SCHEMA: List[Dict[str, Any]] = [
         "name": "Outline Model",
         "key": "outline_model",
         "type": "model",
-        "default": "openai/gpt-4.1-nano",
+        "default": DEFAULT_MODEL,
         "options": MODEL_OPTIONS,
         "desc": "Model for the outline stage (provider/model)",
         "cn": "大纲模型（服务商/模型）",
@@ -137,7 +143,7 @@ SCHEMA: List[Dict[str, Any]] = [
         "name": "Brief Model",
         "key": "brief_model",
         "type": "model",
-        "default": "openai/gpt-4.1-nano",
+        "default": DEFAULT_MODEL,
         "options": MODEL_OPTIONS,
         "desc": "Model for the brief + short stages (provider/model)",
         "cn": "简报/短摘要模型（服务商/模型）",
@@ -146,7 +152,7 @@ SCHEMA: List[Dict[str, Any]] = [
         "name": "Evolve Model",
         "key": "evolve_model",
         "type": "model",
-        "default": "openai/gpt-4.1-nano",
+        "default": DEFAULT_MODEL,
         "options": MODEL_OPTIONS,
         "desc": "Model for folding feedback into preferences (provider/model)",
         "cn": "反馈进化模型（服务商/模型）",
@@ -155,7 +161,7 @@ SCHEMA: List[Dict[str, Any]] = [
         "name": "Translate Model",
         "key": "translate_model",
         "type": "model",
-        "default": "openai/gpt-4o-mini",
+        "default": DEFAULT_MODEL,
         "options": MODEL_OPTIONS,
         "desc": "Model for translation / compression (provider/model)",
         "cn": "翻译/压缩模型（服务商/模型）",

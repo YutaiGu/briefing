@@ -62,8 +62,8 @@
     button { padding: 7px 14px; border: 1px solid var(--accent); background: var(--accent); color: #fff; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13.5px; font-family: var(--sans); }
     button:hover { background: var(--accent-deep); border-color: var(--accent-deep); }
     button[disabled] { opacity: 0.5; cursor: not-allowed; }
-    #stop-btn { background: var(--surface); color: var(--ink); border-color: var(--line); }
-    #stop-btn:hover { background: var(--surface-2); }
+    #stop-btn, button.secondary { background: var(--surface); color: var(--ink); border-color: var(--line); }
+    #stop-btn:hover, button.secondary:hover { background: var(--surface-2); }
 
     .muted { color: var(--muted); }
     .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -389,26 +389,35 @@
       ctrl.className = "prov-ctrl";
       block.appendChild(ctrl);
 
+      const NEW = "\u0000new";
       const sel = document.createElement("select"); sel.className = "prov-sel";
-      rows.forEach(r => { const o = document.createElement("option"); o.value = r.id; o.textContent = r.id; sel.appendChild(o); });
-      const urlInp = document.createElement("input"); urlInp.placeholder = "https://.../chat/completions";
+      const idInp = document.createElement("input"); idInp.placeholder = "name (model prefix)";
+      const urlInp = document.createElement("input"); urlInp.placeholder = "https://.../v1";
       const keyInp = document.createElement("input"); keyInp.type = "password"; keyInp.placeholder = "API key";
       const saveB = document.createElement("button"); saveB.type = "button"; saveB.textContent = "Save";
+      const delB = document.createElement("button"); delB.type = "button"; delB.textContent = "Delete";
+      delB.className = "secondary";
       const status = document.createElement("span"); status.className = "fb-status";
 
+      function fillSelect(selected) {
+        sel.innerHTML = "";
+        rows.forEach(r => { const o = document.createElement("option"); o.value = r.id; o.textContent = r.id; sel.appendChild(o); });
+        const add = document.createElement("option"); add.value = NEW; add.textContent = "+ New…"; sel.appendChild(add);
+        sel.value = selected ?? (rows[0]?.id ?? NEW);
+      }
+
       function load() {
+        const isNew = sel.value === NEW;
         const r = rows.find(x => x.id === sel.value) || {};
+        idInp.hidden = !isNew; delB.hidden = isNew;
+        idInp.value = "";
         urlInp.value = r.base_url || "";
         keyInp.value = r.api_key || "";
         status.textContent = "";
       }
       sel.onchange = load;
 
-      saveB.onclick = async () => {
-        const r = rows.find(x => x.id === sel.value);
-        if (!r) return;
-        r.base_url = urlInp.value.trim();
-        r.api_key = keyInp.value.trim();
+      async function persist() {
         status.textContent = "Saving…";
         const res = await fetch("/api/config", {
           method: "PUT", headers: { "Content-Type": "application/json" },
@@ -416,10 +425,37 @@
         });
         status.textContent = res.ok ? "Saved ✓" : "Failed";
         setTimeout(() => { if (status.textContent === "Saved ✓") status.textContent = ""; }, 1500);
+      }
+
+      saveB.onclick = async () => {
+        let r = rows.find(x => x.id === sel.value);
+        if (sel.value === NEW) {
+          const id = idInp.value.trim();
+          if (!id || id.includes("/") || rows.some(x => x.id === id)) {
+            status.textContent = "Name must be unique, without '/'";
+            return;
+          }
+          r = { id, base_url: "", api_key: "" };
+          rows.push(r);
+          fillSelect(id); load();
+        }
+        if (!r) return;
+        r.base_url = urlInp.value.trim();
+        r.api_key = keyInp.value.trim();
+        urlInp.value = r.base_url; keyInp.value = r.api_key;
+        await persist();
       };
 
-      ctrl.append(sel, urlInp, keyInp, saveB, status);
-      if (rows.length) sel.value = rows[0].id;
+      delB.onclick = async () => {
+        const i = rows.findIndex(x => x.id === sel.value);
+        if (i < 0) return;
+        rows.splice(i, 1);
+        fillSelect(); load();
+        await persist();
+      };
+
+      ctrl.append(sel, idInp, urlInp, keyInp, saveB, delB, status);
+      fillSelect();
       load();
       return block;
     }
@@ -446,6 +482,8 @@
       channelsLabel.textContent = f.name;
       channelsLabel.dataset.tip = tipFor(f);
     }
+
+    const CUSTOM_MODEL = "\u0000custom";
 
     function fieldFromSchema(f, value) {
       const displayValue = deriveDisplayValue(f, value);
@@ -488,6 +526,9 @@
           });
           el.appendChild(og);
         });
+        const custom = document.createElement("option");
+        custom.value = CUSTOM_MODEL; custom.textContent = "Custom… (provider/model)";
+        el.appendChild(custom);
       } else if (f.type === "select") {
         el = document.createElement("select");
         const choices = Array.isArray(f.choices) ? f.choices : [];
@@ -513,6 +554,20 @@
       const pathKey = f.key || f.name;
       el.onchange = (e) => updateField(pathKey, e.target.value);
       label.appendChild(el);
+      if (f.type === "model") {
+        // any model of any provider row, typed as "<provider>/<model>"
+        const input = document.createElement("input");
+        input.placeholder = "provider/model"; input.hidden = true;
+        el.onchange = () => {
+          input.hidden = el.value !== CUSTOM_MODEL;
+          if (input.hidden) updateField(pathKey, el.value); else input.focus();
+        };
+        input.onchange = () => {
+          const v = input.value.trim();
+          if (v.includes("/")) updateField(pathKey, v);
+        };
+        label.appendChild(input);
+      }
       return label;
     }
 
