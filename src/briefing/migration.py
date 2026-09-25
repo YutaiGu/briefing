@@ -1,7 +1,7 @@
 """Export / import all briefing state as one portable zip, for moving between
 machines (mac/windows) and across app versions.
 
-Bundled: config.json, cookies.txt, db.sqlite3, output/, reports/, preferences/.
+Bundled: config.json, cookies/, db.sqlite3, output/, reports/, preferences/.
 Excluded: audio/ and model_prices.json (large, regenerable) and transient files.
 
 Forward compatibility: zip paths use forward slashes; config.json is re-merged
@@ -20,7 +20,7 @@ FORMAT = "briefing-migration"
 FORMAT_VERSION = 1
 
 # members relative to DATA_DIR; directories are included recursively
-MEMBERS = ["config.json", "cookies.txt", "db.sqlite3", "output", "reports", "preferences"]
+MEMBERS = ["config.json", "cookies", "db.sqlite3", "output", "reports", "preferences"]
 
 
 def _app_version() -> str:
