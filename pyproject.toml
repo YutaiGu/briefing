@@ -17,6 +17,7 @@ dependencies = [
     "pywebview",
     "faster-whisper",
     "imageio-ffmpeg",
+    "python-dotenv",
 ]
 
 [project.optional-dependencies]
