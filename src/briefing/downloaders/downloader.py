@@ -1,11 +1,10 @@
 from yt_dlp import YoutubeDL
 from datetime import datetime
-from http.cookiejar import MozillaCookieJar
 import hashlib
 import json
 
-from briefing.config import AUDIO_DIR, ENTRIES_LIMIT, SOURCE_URLS, UPDATE_LIMIT, PENDING_FILE, COOKIES_TXT, FFMPEG_BIN
-from briefing.cookies import _SilentLogger
+from briefing.config import AUDIO_DIR, ENTRIES_LIMIT, SOURCE_URLS, UPDATE_LIMIT, PENDING_FILE, FFMPEG_BIN
+from briefing.cookies import _SilentLogger, create_cookies_txt, session_for
 from briefing.db import Video, update_entries, init_entries, get_undownloaded, get_entries_by_ids, save_entries
 from . import douyin_downloader
 
@@ -15,33 +14,21 @@ try:
 except Exception:
     _ENTRIES_LIMIT_INT = 10
 
-_cookie_jar = MozillaCookieJar()
-_cookies_txt = COOKIES_TXT
-if _cookies_txt.exists():
-    try:
-        _cookie_jar.load(str(_cookies_txt), ignore_discard=True, ignore_expires=True)
-    except Exception:
-        pass
-
-def _inject(ydl: YoutubeDL) -> None:
-    for c in _cookie_jar:
+def _ydl(opts: dict, url: str, inject: bool) -> YoutubeDL:
+    """YoutubeDL carrying one browser's cookies for the url's site, with that browser's UA."""
+    session = session_for(url) if inject else None
+    if session is None:
+        return YoutubeDL(opts)
+    ydl = YoutubeDL({**opts, "http_headers": {"User-Agent": session.user_agent}})
+    for c in session.cookies:
         ydl.cookiejar.set_cookie(c)
+    return ydl
 
 def _refresh_cookies() -> None:
-    global _cookie_jar
     try:
-        from briefing.cookies import create_cookies_txt
         create_cookies_txt()
     except Exception as e:
         print(f"[cookies] refresh failed: {type(e).__name__}: {e}")
-
-    jar = MozillaCookieJar()
-    if _cookies_txt.exists():
-        try:
-            jar.load(str(_cookies_txt), ignore_discard=True, ignore_expires=True)
-        except Exception:
-            pass
-    _cookie_jar = jar
 
 def downloader(session) -> None:
     _refresh_cookies()
@@ -131,9 +118,7 @@ def fetch_all_entries(source_url: str) -> list:
 
         for extra, inject in attempts:
             try:
-                with YoutubeDL({**ydl_opts, **extra}) as ydl:
-                    if inject:
-                        _inject(ydl)
+                with _ydl({**ydl_opts, **extra}, source_url, inject) as ydl:
                     info = ydl.extract_info(source_url, download=False)
                 if info:
                     break
@@ -248,9 +233,7 @@ def download_entry(entry: Video) -> bool:
 
     for extra, inject in attempts:
         try:
-            with YoutubeDL({**ydl_opts, **extra}) as ydl:
-                if inject:
-                    _inject(ydl)
+            with _ydl({**ydl_opts, **extra}, entry.webpage_url, inject) as ydl:
                 info = ydl.extract_info(entry.webpage_url, download=True)
             if out_path.exists():
                 entry.downloaded = 1
