@@ -66,7 +66,7 @@ def request_gpt(input, system_content, model, check=None, retries=2):
                 max_tokens=model_limits(name)["max_output"],
             )
         except Exception as e:
-            print(f"[gpt] request failed: {type(e).__name__}")
+            print(f"[gpt] request failed ({model}): {type(e).__name__}: {str(e)[:200]}")
             raise
 
         if response_json.get("error") is not None:
