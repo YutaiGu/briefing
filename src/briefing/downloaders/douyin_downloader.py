@@ -21,12 +21,12 @@ import asyncio
 import hashlib
 import json
 from datetime import datetime
-from http.cookiejar import MozillaCookieJar
 from pathlib import Path
 
 import requests
 
-from briefing.config import COOKIES_TXT, AUDIO_DIR, DATA_DIR
+from briefing.config import AUDIO_DIR, DATA_DIR
+from briefing.cookies import Session, browser_profile, session_for
 
 import logging
 
@@ -42,10 +42,11 @@ _URL_CACHE = DATA_DIR / ".douyin_urls.json"
 # f2 imports are deferred into functions so importing this module never hard-fails
 # if f2 isn't installed in a given environment (e.g. the YouTube-only path).
 
-_UA = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-)
+_HOME = "https://www.douyin.com/"
+_DEFAULT_BROWSER = "chrome"   # UA/fingerprint when no browser has Douyin cookies
+
+# Browser fields sent to the Douyin API; read by the f2 patch below on every request.
+_f2_params: dict = {}
 
 
 # --------------------------------------------------------------------------- #
@@ -116,33 +117,50 @@ def cache_get(video_id: str) -> str | None:
     return None
 
 
-def _load_cookie() -> str:
-    """Build a 'k=v; k=v' Cookie header from cookies.txt (Mozilla format,
-    filtered to douyin.com). Returns "" if none found."""
-    cookies_txt = COOKIES_TXT
-    if cookies_txt.exists():
-        try:
-            jar = MozillaCookieJar()
-            jar.load(str(cookies_txt), ignore_discard=True, ignore_expires=True)
-            douyin = [c for c in jar if "douyin.com" in (c.domain or "")]
-            auth = [c for c in douyin if c.name in ("sessionid", "sessionid_ss", "sid_guard")]
-            if not auth or all(c.is_expired() for c in auth):
-                print("[douyin] WARNING: login cookies missing/expired")
-            parts = [f"{c.name}={c.value}" for c in douyin]
-            if parts:
-                return "; ".join(parts)
-        except Exception:
-            pass
-    return ""
+def _session() -> tuple[str, dict]:
+    """(Cookie header, browser profile) of the single browser serving Douyin."""
+    session: Session | None = session_for(_HOME)
+    if session is None:
+        print("[douyin] WARNING: no Douyin cookie in any browser. Homepage listing may fail.")
+        return "", browser_profile(_DEFAULT_BROWSER)
+    if not session.logged_in:
+        print(f"[douyin] WARNING: login cookies missing/expired ({session.browser})")
+    return session.cookie_header, session.profile
+
+
+def _patch_f2() -> None:
+    """f2 hardcodes Edge/Win32 in the API params and the a_bogus fingerprint. Make both
+    follow _f2_params so they match the UA and cookies we send.
+    Relies on f2==0.0.1.7 internals (pinned in pyproject.toml)."""
+    from f2.apps.douyin import utils
+
+    if getattr(utils, "_briefing_patched", False):
+        return
+    generate = utils.BrowserFpGen._generate_fingerprint
+
+    class _Fingerprint:
+        @staticmethod
+        def generate_fingerprint(_browser_type="Edge"):
+            return generate(_f2_params.get("browser_platform", "Win32"))
+
+    utils.BrowserFpGen = _Fingerprint
+    for manager in (utils.ABogusManager, utils.XBogusManager):
+        sign = manager.model_2_endpoint
+
+        def model_2_endpoint(cls, user_agent, base_endpoint, params, *args, _sign=sign, **kwargs):
+            params = {k: _f2_params.get(k, v) for k, v in params.items()}
+            return _sign(user_agent, base_endpoint, params, *args, **kwargs)
+
+        manager.model_2_endpoint = classmethod(model_2_endpoint)
+    utils._briefing_patched = True
 
 
 def _build_kwargs() -> dict:
-    cookie = _load_cookie()
-    if not cookie:
-        print("[douyin] WARNING: no Douyin cookie found in cookies.txt. "
-              "Homepage listing may fail.")
+    cookie, profile = _session()
+    _f2_params.clear()
+    _f2_params.update({k: v for k, v in profile.items() if k != "user_agent"})
     return {
-        "headers": {"User-Agent": _UA, "Referer": "https://www.douyin.com/"},
+        "headers": {"User-Agent": profile["user_agent"], "Referer": _HOME},
         "cookie": cookie,
         "proxies": {"http://": None, "https://": None},
         "timeout": 20,
@@ -167,6 +185,7 @@ def _build_kwargs() -> dict:
 def _handler():
     from f2.apps.douyin.handler import DouyinHandler
     _quiet_f2()  # re-apply: F2 resets its logger level on init
+    _patch_f2()
     return DouyinHandler(_build_kwargs())
 
 
@@ -381,8 +400,8 @@ def _stream_to(direct_url: str, out_path_no_ext: Path) -> Path | None:
     follows the source: a direct mp3 stays mp3, otherwise mp4. No transcoding.
     Returns the saved Path, else None.
     """
-    headers = {"User-Agent": _UA, "Referer": "https://www.douyin.com/"}
-    cookie = _load_cookie()
+    cookie, profile = _session()
+    headers = {"User-Agent": profile["user_agent"], "Referer": _HOME}
     if cookie:
         headers["Cookie"] = cookie
 
