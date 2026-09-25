@@ -2,7 +2,7 @@ import json
 import requests
 from datetime import datetime
 
-from briefing.config import api_model, READ_LANGUAGE, OUTPUT_DIR, NTFY_SERVER, COMPRESS_LEVEl, REPORT_DIR, PUSH_TO, load_prompt
+from briefing.config import api_model, READ_LANGUAGE, OUTPUT_DIR, NTFY_SERVER, COMPRESS_LEVEl, REPORT_DIR, PUSH_TO, BASE_DIR, load_prompt
 from briefing.db import get_unpushed, update_entries
 from briefing.summarizer_agent import request_gpt
 from briefing.summarizer_agent.validators import check_translate, normalize_bold
@@ -41,6 +41,21 @@ def pushto_localfile(message: str) -> None:
     except Exception:
         return False
 
+def pushto_dashboard(items: list) -> bool:
+    # One file per batch on the main server, like pushto_localfile. Needs the private
+    # `tools` package and its connection settings in BASE_DIR/.env.
+    try:
+        from dotenv import load_dotenv
+        from tools.servers_communication import client_push
+
+        load_dotenv(BASE_DIR / ".env")
+        now = datetime.now().strftime("%Y%m%d-%H%M%S")
+        client_push(now, {"items": items}, backend_name="briefing")
+        return True
+    except Exception as e:
+        print(f"Push Error (dashboard): {e}")
+        return False
+
 def _no_translate(input: str):
     return {"choices": [{"message": {"content": input}}]}
 
@@ -70,6 +85,7 @@ def pusher(session, limit: int) -> None:
         return
 
     parts = []
+    items = []
     for v in todo:
         try:
             if not v.video_id:
@@ -122,6 +138,8 @@ def pusher(session, limit: int) -> None:
                 notification += (f"**{headline}**\n" if headline else "") + (f"> {short}\n" if short else "") + "\n---\n"
             notification += content
             parts.append(notification)
+            items.append({"title": title, "source": source, "webpage_url": v.webpage_url or "",
+                          "upload_date": upload_date, "headline": headline, "short": short, "content": content})
 
         except Exception:
             continue
@@ -135,6 +153,8 @@ def pusher(session, limit: int) -> None:
         target = (PUSH_TO or "ntfy").strip()
         if target == "LocalFile":
             ok = pushto_localfile(body)
+        elif target == "Dashboard":
+            ok = pushto_dashboard(items)
         else:
             ok = pushto_ntfy(body)
 

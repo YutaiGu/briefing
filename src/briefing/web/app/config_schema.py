@@ -76,7 +76,7 @@ SCHEMA: List[Dict[str, Any]] = [
         "key": "PUSH_TO",
         "type": "select",
         "default": "LocalFile",
-        "choices": ["ntfy", "LocalFile"],
+        "choices": ["ntfy", "LocalFile", "Dashboard"],
         "desc": "Push to where",
         "cn": "推送到哪里",
     },
