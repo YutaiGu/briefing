@@ -10,15 +10,25 @@ Model families differ in which sampling params they accept (reasoning models
 reject temperature / presence_penalty / max_tokens). Instead of per-model rules,
 a param the endpoint rejects with HTTP 400 is dropped and the call retried; the
 rejection is remembered for that model for the rest of the process.
+
+Responses are streamed and assembled into a normal completion dict: long
+reasoning answers take minutes, and a silent non-streamed connection gets cut
+by the network in between. Dropped connections are retried.
 Prices come from the litellm dataset (see pricing.py).
 """
+import json
+import time
+
 import requests
 
 from briefing.config import api_info
 from briefing.llm.pricing import price
 
 _CHAT_PATH = "/chat/completions"
-_OPTIONAL = ("temperature", "presence_penalty", "max_tokens", "max_completion_tokens")
+_OPTIONAL = ("temperature", "presence_penalty", "max_tokens", "max_completion_tokens", "stream_options")
+_NETWORK_ERRORS = (requests.exceptions.ChunkedEncodingError, requests.exceptions.ConnectionError,
+                   requests.exceptions.Timeout)
+_RETRY_DELAYS = (5, 15)
 _rejected: dict[tuple[str, str], set[str]] = {}   # (url, model) -> params the endpoint refused
 
 
@@ -61,13 +71,55 @@ def _rejected_param(status: int, data, payload: dict) -> str | None:
     return next((p for p in sent if p in message), None)
 
 
+def _stream(url: str, payload: dict, headers: dict, timeout) -> tuple[int, object]:
+    """One streamed call -> (status, body). body is the assembled completion on
+    success, else the endpoint's error JSON."""
+    with requests.post(url, json={**payload, "stream": True}, headers=headers,
+                       timeout=timeout, stream=True) as resp:
+        if resp.status_code != 200:
+            try:
+                return resp.status_code, resp.json()
+            except ValueError:
+                return resp.status_code, {"error": {"message": resp.text[:500]}}
+        resp.encoding = "utf-8"
+        content, usage, finish = [], {}, None
+        for line in resp.iter_lines(decode_unicode=True):
+            if not line.startswith("data:"):
+                continue                      # keep-alive blank lines / SSE comments
+            data = line[5:].strip()
+            if data == "[DONE]":
+                break
+            chunk = json.loads(data)
+            if chunk.get("error"):
+                return 502, chunk
+            usage = chunk.get("usage") or usage
+            for choice in chunk.get("choices") or []:
+                content.append((choice.get("delta") or {}).get("content") or "")
+                finish = choice.get("finish_reason") or finish
+    if finish is None:  # closed without a final chunk: the answer is truncated
+        raise requests.exceptions.ChunkedEncodingError("stream ended before finish_reason")
+    message ={"role": "assistant", "content": "".join(content)}
+    return 200, {"choices": [{"index": 0, "message": message, "finish_reason": finish}], "usage": usage}
+
+
+def _send(url: str, payload: dict, headers: dict, timeout) -> tuple[int, object]:
+    for delay in (*_RETRY_DELAYS, None):
+        try:
+            return _stream(url, payload, headers, timeout)
+        except _NETWORK_ERRORS as e:
+            if delay is None:
+                raise
+            print(f"[llm] {payload['model']} {type(e).__name__}, retrying in {delay}s")
+            time.sleep(delay)
+
+
 def completion(model, messages, api_key=None, api_base=None,
                temperature=None, presence_penalty=None, max_tokens=None,
-               timeout=(20, 120), **kwargs):
+               timeout=(20, 600), **kwargs):
     url = chat_url(api_base or api_info["url_redirect"])
     # OpenAI accepts max_completion_tokens on every chat model; reasoning models only that one.
     max_key = "max_completion_tokens" if "api.openai.com" in url else "max_tokens"
-    payload = {"model": model, "messages": messages, **kwargs}
+    payload = {"model": model, "messages": messages, "stream_options": {"include_usage": True}, **kwargs}
     for key, value in (("temperature", temperature), ("presence_penalty", presence_penalty), (max_key, max_tokens)):
         if value is not None:
             payload[key] = value
@@ -80,9 +132,8 @@ def completion(model, messages, api_key=None, api_base=None,
     for _ in range(len(_OPTIONAL) + 1):
         for p in rejected:
             payload.pop(p, None)
-        resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
-        raw = resp.json()
-        bad = _rejected_param(resp.status_code, raw, payload)
+        status, raw = _send(url, payload, headers, timeout)
+        bad = _rejected_param(status, raw, payload)
         if bad is None:
             break
         print(f"[llm] {model} rejected '{bad}', retrying without it")
