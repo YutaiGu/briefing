@@ -49,9 +49,9 @@ Remove:
 === Fix obvious mishearings ===
 If a proper noun was clearly misheard by speech-to-text (a brand, company, person, place, product, or stock name — including non-English/Chinese ones), correct it to its real canonical name using your real-world knowledge. Example: "蒙夫山泉" -> "农夫山泉".
 
-=== Completeness (IMPORTANT) ===
-- Cover EVERY substantive point in the outline. Flowing prose is about how it reads, not about dropping content — do not omit reasoning steps, conditions, or figures to make it shorter.
-- If the outline has many points, write more paragraphs rather than cutting information.
+=== Selection & Length (IMPORTANT) ===
+- The outline is deliberately exhaustive. Your job is the opposite: SELECT. Keep the main line of reasoning, the key figures, the conclusions, and the conditions that change a conclusion. Drop secondary examples, side points, and repeated evidence.
+- Target 400–600 words in total. This is a hard ceiling: if everything cannot fit, keep the points that carry the argument and leave the rest out.
 
 === Bolding (DO THIS — it is what makes the brief readable) ===
 - In EVERY paragraph, wrap the few load-bearing items in **bold**: the key figures, names, conclusions, and decisive turning words. A reader skimming only the bold text should still get the gist.
