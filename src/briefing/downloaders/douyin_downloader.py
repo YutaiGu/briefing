@@ -128,9 +128,19 @@ def _session() -> tuple[str, dict]:
     return session.cookie_header, session.profile
 
 
+def _uifid(cookie: str) -> str:
+    """The UIFID cookie of the logged-in browser, or "" when it has none."""
+    for part in cookie.split("; "):
+        name, _, value = part.partition("=")
+        if name == "UIFID":
+            return value
+    return ""
+
+
 def _patch_f2() -> None:
     """f2 hardcodes Edge/Win32 in the API params and the a_bogus fingerprint. Make both
-    follow _f2_params so they match the UA and cookies we send.
+    follow _f2_params so they match the UA and cookies we send, and add uifid to the
+    params before they are signed.
     Relies on f2==0.0.1.7 internals (pinned in pyproject.toml)."""
     from f2.apps.douyin import utils
 
@@ -149,6 +159,8 @@ def _patch_f2() -> None:
 
         def model_2_endpoint(cls, user_agent, base_endpoint, params, *args, _sign=sign, **kwargs):
             params = {k: _f2_params.get(k, v) for k, v in params.items()}
+            if _f2_params.get("uifid"):
+                params["uifid"] = _f2_params["uifid"]
             return _sign(user_agent, base_endpoint, params, *args, **kwargs)
 
         manager.model_2_endpoint = classmethod(model_2_endpoint)
@@ -159,8 +171,16 @@ def _build_kwargs() -> dict:
     cookie, profile = _session()
     _f2_params.clear()
     _f2_params.update({k: v for k, v in profile.items() if k != "user_agent"})
+    headers = {"User-Agent": profile["user_agent"], "Referer": _HOME}
+    # Since 2026-09 Douyin's Argus gateway answers web API calls without uifid with
+    # 403 "Uifid Not Found". It wants the UIFID cookie in the params and a header;
+    # x-tt-argus is only checked for presence.
+    uifid = _uifid(cookie)
+    if uifid:
+        _f2_params["uifid"] = uifid
+        headers.update({"uifid": uifid, "x-tt-argus": "1"})
     return {
-        "headers": {"User-Agent": profile["user_agent"], "Referer": _HOME},
+        "headers": headers,
         "cookie": cookie,
         "proxies": {"http://": None, "https://": None},
         "timeout": 20,
